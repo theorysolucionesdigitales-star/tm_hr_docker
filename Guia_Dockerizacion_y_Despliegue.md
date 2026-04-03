@@ -163,11 +163,18 @@ sudo sh get-docker.sh
 1. Descarga el código de tu proyecto dentro del VPS. Lo ideal sería clonar tu repositorio git dentro del espacio de opt `/opt`.
    ```bash
    cd /opt
-   git clone https://github.com/usuario/mi-repo-hr.git proyecto
+   #git clone https://github.com/usuario/mi-repo-hr.git proyecto
+   git clone https://github.com/theorysolucionesdigitales-star/tm_hr_docker.git proyecto
    cd proyecto/supabase-docker
    ```
 
-2. Verifica que el `.env` del VPS tiene las contraseñas correctas y la `API_EXTERNAL_URL` de supabase apunte a `http://<IP_DE_VPS>:8000` u otro de forma remota.
+2. **Crear y Transferir el Archivo `.env`**: Como el archivo `.env` está protegido por Git (`.gitignore`), el VPS no lo descargará automáticamente.
+   - Ejecuta: `cp .env.example .env && nano .env`
+   - Vacía el archivo en la consola y pega o transcribe íntegramente tu `.env` validado localmente para transferir tus contraseñas fuertes.
+   - Antes de guardar, modifica la sección URLs (`SUPABASE_PUBLIC_URL` y `API_EXTERNAL_URL`), cambiando *localhost* por la **IP pública real de Hostinger** para que el Frontend y Backend conozcan su ubicación.
+   - *(En `nano`: Guarda con `Ctrl + O`, entra, y sal con `Ctrl + X`)*.
+   
+   > *💡 Nota:* El motor Docker reconstruirá automáticamente la aplicación frontend usando la IP remota que indiques, ya que insertará la variable de forma dinámica.
 
 3. Es tiempo de despertar los recursos en el VPS:
    ```bash

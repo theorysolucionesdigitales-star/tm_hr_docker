@@ -150,7 +150,7 @@ El proyecto está íntegramente dockerizado, permitiendo un despliegue aislado, 
 1. Ingresa a tu servidor vía SSH: `ssh root@<IP_DEL_VPS>`
 2. Instala el motor de Docker (Vía script sugerido para Ubuntu): `curl -fsSL https://get.docker.com -o get-docker.sh && sudo sh get-docker.sh`
 3. Clona tu repositorio en un espacio administrado, por ejemplo `/opt/`.
-4. Edita estrictamente el archivo `supabase-docker/.env` para colocar contraseñas robustas y definir URL basadas en la **IP real** de tu servidor en lugar de *localhost*.
+4. Crea tu archivo `.env` (no viaja por Git por seguridad): Cópialo manualmente desde tu PC usando `nano .env` y pega tus contraseñas maestras. Asegúrate de modificar `SUPABASE_PUBLIC_URL` y `API_EXTERNAL_URL` por la **IP real** de tu servidor en lugar de *localhost*.
 5. Construye la aplicación y levanta todo orquestado:
    ```sh
    cd supabase-docker
