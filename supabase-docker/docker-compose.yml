@@ -564,7 +564,7 @@ services:
       context: .. # Se ubica una carpeta atrás, en la raíz del proyecto
       dockerfile: Dockerfile
       args:
-        - VITE_SUPABASE_URL=http://localhost:8000
+        - VITE_SUPABASE_URL=${API_EXTERNAL_URL}
         - VITE_SUPABASE_ANON_KEY=${ANON_KEY}
         - VITE_SUPABASE_PUBLISHABLE_KEY=${ANON_KEY}
     container_name: hr_frontend
