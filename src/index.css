@@ -1,0 +1,135 @@
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600&family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 20% 95%;
+    --foreground: 215 25% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 15%;
+
+    --primary: 210 65% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 15% 90%;
+    --secondary-foreground: 215 25% 20%;
+
+    --muted: 210 15% 93%;
+    --muted-foreground: 215 10% 45%;
+
+    --accent: 175 50% 40%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 15% 88%;
+    --input: 210 15% 88%;
+    --ring: 210 65% 45%;
+
+    --radius: 0.625rem;
+
+    --sidebar-background: 215 35% 15%;
+    --sidebar-foreground: 210 15% 85%;
+    --sidebar-primary: 210 65% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 30% 22%;
+    --sidebar-accent-foreground: 210 15% 92%;
+    --sidebar-border: 215 25% 22%;
+    --sidebar-ring: 210 65% 55%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --success: 175 50% 40%;
+    --success-foreground: 0 0% 100%;
+    --info: 210 65% 45%;
+    --info-foreground: 0 0% 100%;
+
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  .dark {
+    --background: 215 35% 9%;
+    --foreground: 210 15% 92%;
+    --card: 215 30% 14%;
+    --card-foreground: 210 15% 92%;
+    --popover: 215 30% 14%;
+    --popover-foreground: 210 15% 92%;
+    --primary: 210 60% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 215 25% 20%;
+    --secondary-foreground: 210 15% 85%;
+    --muted: 215 25% 17%;
+    --muted-foreground: 210 12% 55%;
+    --accent: 175 50% 40%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 25% 20%;
+    --input: 215 25% 20%;
+    --ring: 210 60% 50%;
+    --sidebar-background: 215 40% 7%;
+    --sidebar-foreground: 210 15% 85%;
+    --sidebar-primary: 210 60% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 30% 13%;
+    --sidebar-accent-foreground: 210 15% 92%;
+    --sidebar-border: 215 25% 14%;
+    --sidebar-ring: 210 60% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border transition-colors duration-300 ease-in-out;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased transition-colors duration-300 ease-in-out;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 dark:bg-slate-700 rounded-full transition-colors;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-400 dark:bg-slate-600;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-sm border border-border/50 shadow-sm transition-all duration-300;
+  }
+
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:border-primary/40 cursor-pointer;
+  }
+
+  .btn-pulse {
+    @apply transition-all duration-300 active:scale-95 hover:shadow-[0_0_15px_rgba(var(--primary), 0.5)];
+  }
+}
