@@ -186,6 +186,7 @@ sudo sh get-docker.sh
    ```
 
 Con esto ya puedes acceder a `http://<IP_DE_VPS>` y observar ¡tu Frontend operando conectado al Supabase embebido!
+Ahora lee la seccion de migraciones y seeders del README.md para implementar las tablas y seeders.
 
 ---
 

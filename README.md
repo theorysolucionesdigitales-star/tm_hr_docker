@@ -100,6 +100,8 @@ docker compose up -d --build
 
 Las migraciones se encuentran en `supabase/migrations/` y se ejecutan en orden cronológico.
 
+#### opcion via Supabase cli, (no implementado)
+
 ```sh
 # Ejecutar migraciones con Supabase CLI
 supabase db push
@@ -107,6 +109,8 @@ supabase db push
 # O manualmente con psql (en orden):
 psql -h <DB_HOST> -U postgres -d postgres -f supabase/migrations/<archivo>.sql
 ```
+#### opcion via Supabase web accediendo a http://localhost:8000 o http://<ip del servidor>:8000
+Ir al apartado SQL y ejecutar las migraciones en orden. Mismo caso para los seeders
 
 ### Seeders
 
