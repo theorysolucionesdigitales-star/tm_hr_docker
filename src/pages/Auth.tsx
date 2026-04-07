@@ -17,7 +17,7 @@ const Auth = () => {
 
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) toast.error(error.message);
-    
+
     setLoading(false);
   };
 
@@ -27,12 +27,12 @@ const Auth = () => {
         {/* Decorative elements */}
         <div className="absolute top-0 right-0 -mt-16 -mr-16 w-32 h-32 bg-primary/10 rounded-full blur-2xl"></div>
         <div className="absolute bottom-0 left-0 -mb-16 -ml-16 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl"></div>
-        
+
         <CardHeader className="text-center relative z-10">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center shrink-0">
-             <img src="/logo-rompecabezas.png" alt="Tailor Made Logo" className="h-full w-full object-contain drop-shadow-md" />
+          <div className="mx-auto mb-4 flex h-[177px] w-[268px] items-center justify-center shrink-0">
+            <img src="/back-cover-v2.png" alt="Tailor Made Logo" className="h-full w-full object-contain drop-shadow-md" />
           </div>
-          <CardTitle className="font-display text-2xl tracking-tight text-foreground/90">Tailor Made</CardTitle>
+          {/* <CardTitle className="font-display text-2xl tracking-tight text-foreground/90">Tailor Made</CardTitle> */}
           <CardDescription className="text-[15px]">
             Inicia sesión en tu cuenta
           </CardDescription>

@@ -27,20 +27,20 @@ export default function PublicReport() {
   const { token } = useParams<{ token: string }>();
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
-  
+
   // Force Light mode strictly for this public report
   const { setTheme } = useTheme();
   useEffect(() => {
     setTheme("light");
-    
+
     // Optional cleanup logic, but since this report covers the entire view, 
     // it's fine for it to take over until they close the tab.
   }, [setTheme]);
-  
+
   // Auth and Data state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
-  
+
   // PDF state
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [numPages, setNumPages] = useState<number>(0);
@@ -74,30 +74,30 @@ export default function PublicReport() {
       });
 
       if (error) throw error;
-      
+
       if (!data) {
         toast.error("Código incorrecto o enlace expirado");
         setReportData(null);
       } else {
         toast.success("Acceso concedido");
         setIsAuthenticated(true);
-        
+
         let reportDataWithObs = (data as any) as ReportData & { observaciones_research?: any[] };
-        
+
         // Failsafe: Si la BD no nos devolvió observaciones_research en el RPC, las buscamos manualmente
         if (!reportDataWithObs.observaciones_research && reportDataWithObs.proceso?.id) {
-            console.log("Fetching observaciones manually...");
-            const { data: cols } = await supabase
-              .from("observaciones_research")
-              .select("*")
-              .eq("proceso_id", reportDataWithObs.proceso.id)
-              .order("orden");
-              
-            if (cols) {
-                reportDataWithObs.observaciones_research = cols;
-            }
+          console.log("Fetching observaciones manually...");
+          const { data: cols } = await supabase
+            .from("observaciones_research")
+            .select("*")
+            .eq("proceso_id", reportDataWithObs.proceso.id)
+            .order("orden");
+
+          if (cols) {
+            reportDataWithObs.observaciones_research = cols;
+          }
         }
-        
+
         setReportData(reportDataWithObs);
         await handleGeneratePDF(reportDataWithObs);
       }
@@ -145,16 +145,16 @@ export default function PublicReport() {
 
   const handleDownloadCV = async (cvUrl: string, candidateName: string) => {
     // If it's already a full URL, use it. Otherwise, get the public URL from storage.
-    const finalUrl = cvUrl.startsWith('http') 
-      ? cvUrl 
+    const finalUrl = cvUrl.startsWith('http')
+      ? cvUrl
       : supabase.storage.from('cvs').getPublicUrl(cvUrl).data.publicUrl;
-    
+
     try {
       // Fetch the file as a blob to force a real download
       const response = await fetch(finalUrl);
       const blob = await response.blob();
       const blobUrl = URL.createObjectURL(blob);
-      
+
       const anchor = document.createElement('a');
       anchor.href = blobUrl;
       anchor.download = `CV_${candidateName.replace(/\s+/g, '_')}.pdf`;
@@ -227,7 +227,7 @@ export default function PublicReport() {
       {/* Top Banner Sticky */}
       <header className="w-full bg-white border-b p-4 px-6 flex items-center justify-between sticky top-0 z-50 shadow-sm backdrop-blur-md bg-white/90">
         <div className="flex items-center gap-3">
-          <img src="/logo-tailor-made.png" alt="Tailor Made" className="h-7 object-contain drop-shadow-sm" />
+          <img src="/back-cover-v2.png" alt="Tailor Made" className="h-7 object-contain drop-shadow-sm" />
           <div className="hidden sm:block border-l pl-4 ml-2 border-slate-300">
             <h2 className="font-display font-bold text-sm leading-tight text-slate-800 dark:text-slate-100 flex items-center gap-2">
               <FileText className="w-4 h-4 text-primary" /> Reporte de {reportData?.proceso?.nombre_cargo}
@@ -236,20 +236,21 @@ export default function PublicReport() {
           </div>
         </div>
         <div className="flex gap-2">
-           {/* Not providing a download button ensures it's read only visualizer */}
-           <div className="bg-slate-100 dark:bg-slate-800 text-slate-500 text-xs px-3 py-1.5 flex items-center gap-2 rounded-md font-medium border border-slate-200 dark:border-slate-700">
-             <Lock className="w-3.5 h-3.5" /> Lectura Protegida
-           </div>
+          {/* Not providing a download button ensures it's read only visualizer */}
+          <div className="bg-slate-100 dark:bg-slate-800 text-slate-500 text-xs px-3 py-1.5 flex items-center gap-2 rounded-md font-medium border border-slate-200 dark:border-slate-700">
+            <Lock className="w-3.5 h-3.5" /> Lectura Protegida
+          </div>
         </div>
       </header>
 
       {/* Main Document Viewer */}
-      <main 
+      <main
         className="flex-1 w-full flex flex-col items-center py-8"
         onContextMenu={(e) => e.preventDefault()}
         onDragStart={(e) => e.preventDefault()}
       >
-        <style dangerouslySetInnerHTML={{ __html: `
+        <style dangerouslySetInnerHTML={{
+          __html: `
           .react-pdf__Page__canvas {
             max-width: 100%;
             height: auto !important;
@@ -271,7 +272,7 @@ export default function PublicReport() {
           className="flex flex-col gap-8 w-full items-center"
           loading={
             <div className="flex items-center justify-center p-12 text-slate-500">
-              <Loader2 className="w-6 h-6 animate-spin mr-2" /> 
+              <Loader2 className="w-6 h-6 animate-spin mr-2" />
               Cargando documento...
             </div>
           }
@@ -285,24 +286,24 @@ export default function PublicReport() {
             const pageNumber = index + 1;
             // The candidate pages start after: 1 (Cover) + 1 (Summary) + 1 (Job Desc) = Page 4
             const candidateIndex = pageNumber - 4;
-            const candidate = (candidateIndex >= 0 && candidateIndex < candidatesForCV.length) 
-                ? candidatesForCV[candidateIndex] 
-                : null;
+            const candidate = (candidateIndex >= 0 && candidateIndex < candidatesForCV.length)
+              ? candidatesForCV[candidateIndex]
+              : null;
 
             return (
-              <div 
-                key={`page_${pageNumber}`} 
+              <div
+                key={`page_${pageNumber}`}
                 onContextMenu={(e) => e.preventDefault()}
                 className="bg-white shadow-[0_10px_30px_rgba(0,0,0,0.15)] rounded-md select-none shrink-0 relative overflow-hidden ring-1 ring-slate-900/5 group"
               >
-                <Page 
-                  pageNumber={pageNumber} 
+                <Page
+                  pageNumber={pageNumber}
                   width={pageWidth}
-                  renderTextLayer={false} 
-                  renderAnnotationLayer={false} 
+                  renderTextLayer={false}
+                  renderAnnotationLayer={false}
                   className="transition-opacity duration-500"
                 />
-                
+
                 {/* CV Download Button Overlay for Candidate Pages */}
                 {candidate && candidate.cv_url && (
                   <div className="absolute right-3 bottom-14 z-10 animate-fade-in">
@@ -317,7 +318,7 @@ export default function PublicReport() {
 
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors pointer-events-none" />
                 <div className="absolute bottom-2 right-4 bg-black/60 backdrop-blur text-white text-[10px] font-bold px-2 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                   {pageNumber} / {numPages}
+                  {pageNumber} / {numPages}
                 </div>
               </div>
             );

@@ -39,7 +39,7 @@ const AppLayout = () => {
     setIsChangingPassword(true);
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     setIsChangingPassword(false);
-    
+
     if (error) {
       toast.error(error.message);
     } else {
@@ -98,15 +98,15 @@ const AppLayout = () => {
         {/* Header */}
         <Link to="/clientes" onClick={() => setSidebarOpen(false)} className={cn(
           "flex h-16 items-center border-b border-sidebar-border transition-all duration-300 hover:bg-sidebar-accent/30",
-          collapsed ? "justify-center px-2" : "gap-3 px-6"
+          "justify-center px-4"
         )}>
-          <div className="flex h-10 w-10 items-center justify-center shrink-0">
+          {/* <div className="flex h-10 w-10 items-center justify-center shrink-0">
             <img src="/logo-rompecabezas.png" alt="Tailor Made Pieza" className="h-full w-full object-contain" />
-          </div>
+          </div> */}
           {!collapsed && (
-            <div className="overflow-hidden">
-              <h1 className="font-logo text-[15px] font-semibold bg-gradient-to-r from-sidebar-primary-foreground to-sidebar-foreground/80 bg-clip-text text-transparent tracking-[0.25em] ml-1 whitespace-nowrap">TAILOR MADE</h1>
-              <p className="font-cursive text-[17px] text-sidebar-foreground/70 -mt-1 tracking-wider ml-1 whitespace-nowrap">Human Consulting</p>
+            <div className="flex flex-col items-center overflow-hidden">
+              <h1 className="font-logo text-[15px] font-semibold bg-gradient-to-r from-sidebar-primary-foreground to-sidebar-foreground/80 bg-clip-text text-transparent tracking-[0.25em] whitespace-nowrap">TAILOR MADE</h1>
+              <p className="font-cursive text-[17px] text-sidebar-foreground/70 -mt-1 tracking-wider whitespace-nowrap">Human Consulting</p>
             </div>
           )}
         </Link>

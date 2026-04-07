@@ -125,7 +125,7 @@ export const generateReportPDF = async (
   const clienteName = (proceso.clientes as any)?.nombre ?? "Cliente";
 
   // Tailor Made logo small for footers
-  const officialLogoBase64 = await fetchRawImageAsBase64("/logo-tailor-made.png");
+  const officialLogoBase64 = await fetchRawImageAsBase64("/back-cover-v2.png");
   const backCoverBase64 = await fetchRawImageAsBase64("/back-cover-v2.png");
 
   const addFooter = (pageNumber: number) => {
@@ -136,7 +136,7 @@ export const generateReportPDF = async (
 
     // Official Footer logo (Tailor Made small) on bottom right
     if (officialLogoBase64) {
-      doc.addImage(officialLogoBase64, "PNG", 254, 177, 48, 12);
+      doc.addImage(officialLogoBase64, "PNG", 250, 177, 48, 12);
     }
   };
 
@@ -212,7 +212,7 @@ export const generateReportPDF = async (
     // Actually the grey background is ...COLORS.bgGrayHeader ? No, wait.
     // The previous text was white on gray. In line 166: doctextColor(white)
     // Let's keep the fallback as it was just smaller
-    doc.setTextColor(60, 60, 60); 
+    doc.setTextColor(60, 60, 60);
     doc.setFontSize(22);
     doc.setFont("helvetica", "bold");
     doc.text(clienteName, W / 2, 132, { align: "center" });
@@ -340,7 +340,7 @@ export const generateReportPDF = async (
     doc.setTextColor(30, 80, 140);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
-    doc.text(`Total candidatos contactados : ${totalChartCandidates}`, pieCenterX, 164, { align: "center" }); 
+    doc.text(`Total candidatos contactados : ${totalChartCandidates}`, pieCenterX, 164, { align: "center" });
   }
 
   // --- Right Side Observations ---
@@ -363,7 +363,7 @@ export const generateReportPDF = async (
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
     doc.text(title, obsStartX + 5, obsStartY);
-    
+
     // Draw box for items
     const boxY = obsStartY + 2;
     // Calculate box height based on items
@@ -422,7 +422,7 @@ export const generateReportPDF = async (
     doc.setFont("helvetica", "normal");
     doc.setFontSize(14);
     const missionLines = doc.splitTextToSize(proceso.mision_cargo, 250);
-    
+
     doc.setTextColor(255, 255, 255); // White text over gray
     doc.text(missionLines, 20, 28, { maxWidth: 250, align: "left" });
   }
@@ -444,7 +444,7 @@ export const generateReportPDF = async (
       // Small grey dot bullet
       doc.setFillColor(200, 200, 200);
       doc.circle(24, currentY - 1, 1, "F");
-      
+
       const splitLines = doc.splitTextToSize(p.descripcion, 250);
       doc.setTextColor(15, 60, 85);
       doc.text(splitLines, 28, currentY, { maxWidth: 250, align: "left" });
@@ -642,7 +642,7 @@ export const generateReportPDF = async (
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
       doc.text("Beneficios Actuales", col4X, rowY);
-      
+
       doc.setTextColor(60, 60, 60);
       doc.setFont("helvetica", "normal");
       const benefText = p.benef_act;
@@ -713,12 +713,12 @@ export const generateReportPDF = async (
         doc.setFontSize(22);
         doc.text(status.toUpperCase(), 148.5, 23, { align: "center" });
       },
-      styles: { 
-        fontSize: 8, 
-        cellPadding: 4, 
-        textColor: [50, 50, 50], 
+      styles: {
+        fontSize: 8,
+        cellPadding: 4,
+        textColor: [50, 50, 50],
         font: "helvetica",
-        lineWidth: 0.1, 
+        lineWidth: 0.1,
         lineColor: [255, 255, 255] // White borders for the whole table
       },
       headStyles: {
