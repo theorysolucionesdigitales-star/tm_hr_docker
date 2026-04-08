@@ -64,7 +64,10 @@ const Auth = () => {
 
         <CardHeader className="text-center relative z-10 pb-2">
           <div className="mx-auto mb-4 flex h-[177px] w-[268px] items-center justify-center shrink-0">
-            <img src="/back-cover-v2.png" alt="Tailor Made Logo" className="h-full w-full object-contain drop-shadow-md" />
+            {/* Logo claro (modo light) */}
+            <img src="/back-cover-v2.png" alt="Tailor Made Logo" className="h-full w-full object-contain drop-shadow-md dark:hidden" />
+            {/* Logo oscuro (modo dark) */}
+            <img src="/logo-tailor-made.png" alt="Tailor Made Logo" className="h-full w-full object-contain drop-shadow-md hidden dark:block" />
           </div>
           <CardDescription className="text-[15px]">
             {view === "login" ? "Inicia sesión en tu cuenta" : "Recuperación de contraseña"}
