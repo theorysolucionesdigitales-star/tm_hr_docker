@@ -179,21 +179,47 @@ ADDITIONAL_REDIRECT_URLS=http://<IP_DEL_VPS>/reset-password
 
 ## 🚀 Despliegue en Producción (Hostinger VPS)
 
-El proyecto está íntegramente dockerizado, permitiendo un despliegue aislado, replicable y con control total en tu propio servidor VPS virtual.
+El proyecto está íntegramente dockerizado y actualmente operativo con **HTTPS/SSL automático** vía Caddy en `https://tailormaderesearch.cl`.
 
-### Pasos Rápidos
-1. Ingresa a tu servidor vía SSH: `ssh root@<IP_DEL_VPS>`
-2. Instala el motor de Docker (Vía script sugerido para Ubuntu): `curl -fsSL https://get.docker.com -o get-docker.sh && sudo sh get-docker.sh`
-3. Clona tu repositorio en un espacio administrado, por ejemplo `/opt/`.
-4. Crea tu archivo `.env` (no viaja por Git por seguridad): Cópialo manualmente desde tu PC usando `nano .env` y pega tus contraseñas maestras. Asegúrate de modificar `SUPABASE_PUBLIC_URL` y `API_EXTERNAL_URL` por la **IP real** de tu servidor en lugar de *localhost*.
-5. Construye la aplicación y levanta todo orquestado:
+### Pasos para el Primer Despliegue
+1. Ingresa a tu servidor vía SSH: `ssh root@187.127.12.121`
+2. Instala Docker: `curl -fsSL https://get.docker.com -o get-docker.sh && sudo sh get-docker.sh`
+3. Clona el repositorio en `/opt/`: `git clone https://github.com/theorysolucionesdigitales-star/tm_hr_docker.git proyecto`
+4. Crea el `.env` (no viaja por Git): `cd proyecto/supabase-docker && cp .env.example .env && nano .env`  
+   Asegúrate de configurar `SUPABASE_PUBLIC_URL`, `API_EXTERNAL_URL` y `SITE_URL` con `https://tailormaderesearch.cl`.
+5. Abre los puertos del firewall:
    ```sh
-   cd supabase-docker
-   docker compose up -d --build
+   sudo ufw allow 80/tcp && sudo ufw allow 443/tcp && sudo ufw allow 443/udp && sudo ufw reload
    ```
-6. Recuerda liberar los puertos principales usando tu cortafuegos (Ej: `sudo ufw allow 80/tcp`).
+6. Verifica que el DNS apunte al VPS (`nslookup tailormaderesearch.cl` → `187.127.12.121`) y luego levanta con Caddy:
+   ```sh
+   docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d --build
+   ```
 
-> 📖 **Guía Completa**: Para detalles finos, consejos y advertencias, consulta la amplia [Guía de Dockerización y Despliegue](./Guia_Dockerizacion_y_Despliegue.md) ya incluida en el código fuente.
+> 📖 **Guía Completa**: Para detalles finos, configuración de SMTP, migraciones y advertencias, consulta la [Guía de Dockerización y Despliegue](./Guia_Dockerizacion_y_Despliegue.md).
 
-### 🚧 Próximos Pasos (Networking y Dominios)
-Al presente la herramienta opera de forma eficaz mediante dirección IP. En un futuro cercano, actualizaremos esta zona al definir el ruteo de un Custom Domain (dominio propio amigable). Utilizaremos preferentemente un Proxy Reverso (como *Nginx Proxy Manager* o túneles cifrados de *Cloudflare*) para encriptar este tráfico con SSL válido y lograr rutas profesionales para la compañía.
+### 🔄 Redespliegues y Actualización de Código
+
+#### Redespliegue rápido (solo cambios de código del Frontend)
+El escenario más común. No toca Supabase ni la base de datos:
+```sh
+cd /opt/proyecto/supabase-docker
+git pull
+docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d --build frontend
+```
+El flag `--build frontend` reconstruye únicamente el contenedor de React, haciendo el proceso considerablemente más rápido.
+
+#### Redespliegue completo (cambios en `.env` o infraestructura)
+Cuando hay cambios en variables de entorno o configuración de Caddy:
+```sh
+# 1. Traer cambios
+cd /opt/proyecto/supabase-docker && git pull
+
+# 2. Editar el .env con los nuevos valores
+nano .env
+
+# 3. Bajar el stack y levantar de nuevo
+docker compose down
+docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d --build
+```
+> ⚠️ Verifica siempre que el DNS apunte correctamente antes de levantar con Caddy, de lo contrario Let's Encrypt no podrá emitir el certificado SSL.

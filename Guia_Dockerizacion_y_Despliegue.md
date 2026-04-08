@@ -248,3 +248,87 @@ El proyecto ya incluye Caddy como reverse proxy con SSL automático via Let's En
 - **Caddy maneja**: Certificado SSL, renovación automática, y redirección HTTP → HTTPS.
 - **Comando de inicio**: `docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d`
 - **Requisito**: El dominio debe apuntar a la IP del VPS (`187.127.12.121`) **antes** del primer arranque para que Let's Encrypt pueda verificar el dominio y emitir el certificado.
+
+---
+
+## Paso 5: Redespliegues y Actualización de Código
+
+Una vez el entorno de producción está operativo, actualizar el código en el VPS es un proceso distinto al primer despliegue. Existen dos escenarios.
+
+### 5.1 Redespliegue Completo (con cambios en `.env` o en la configuración de Caddy/HTTPS)
+
+Sigue este flujo cuando hayas cambiado variables de entorno o configuración de infraestructura:
+
+**1. Conectarte al VPS por SSH:**
+```bash
+ssh root@187.127.12.121
+```
+
+**2. Ir al directorio del proyecto y traer los cambios del repositorio:**
+```bash
+cd /opt/proyecto/supabase-docker
+git pull
+```
+
+**3. Actualizar el `.env` del VPS manualmente** (el `.env` no viaja en Git):
+```bash
+nano .env
+```
+Busca y reemplaza las variables que hayan cambiado. Ejemplo para configuración HTTPS:
+```env
+SUPABASE_PUBLIC_URL=https://tailormaderesearch.cl
+API_EXTERNAL_URL=https://tailormaderesearch.cl
+SITE_URL=https://tailormaderesearch.cl
+ADDITIONAL_REDIRECT_URLS=https://tailormaderesearch.cl/reset-password
+PROXY_DOMAIN=tailormaderesearch.cl
+CERTBOT_EMAIL=theorysolucionesdigitales@gmail.com
+```
+*(Guarda: `Ctrl+O` → `Enter` → `Ctrl+X`)*
+
+**4. Asegúrate de que los puertos del firewall estén abiertos:**
+```bash
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw allow 443/udp
+sudo ufw reload
+```
+
+**5. Verifica que el DNS apunte al VPS:**
+```bash
+# En tu PC (PowerShell):
+nslookup tailormaderesearch.cl
+# Debe mostrar: 187.127.12.121
+```
+> ⚠️ **Caddy fallará si el DNS no apunta correctamente**, porque Let's Encrypt necesita validar el dominio para emitir el certificado SSL.
+
+**6. Bajar el stack actual y levantar de nuevo con Caddy:**
+```bash
+# Bajar el stack actual (sin borrar volúmenes ni datos)
+docker compose down
+
+# Reconstruir el frontend (con las nuevas variables) y levantar todo
+docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d --build
+```
+
+**7. Verificar que todo levantó correctamente:**
+```bash
+# Ver logs de Caddy (debe decir "certificate obtained successfully")
+docker logs supabase-caddy
+
+# Ver todos los contenedores activos
+docker ps
+```
+
+---
+
+### 5.2 Redespliegue Rápido (solo cambios de código del Frontend)
+
+Una vez que HTTPS está funcionando, los despliegues rutinarios de código son mucho más simples. **No se toca Supabase ni la base de datos.**
+
+```bash
+cd /opt/proyecto/supabase-docker
+git pull
+docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d --build frontend
+```
+
+El flag `--build frontend` reconstruye **únicamente** el contenedor de React, haciendo el redespliegue considerablemente más rápido.
