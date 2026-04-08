@@ -1,17 +1,25 @@
 {$PROXY_DOMAIN} {
+    # ── Supabase API routes ──────────────────────────────────────────────────
     @supabase_api path /auth/v1/* /rest/v1/* /graphql/v1 /realtime/v1/* /storage/v1/* /functions/v1/* /mcp /sso/*
 
     handle @supabase_api {
         reverse_proxy kong:8000
     }
 
-    handle {
+    # ── Supabase Studio (panel de administración) ────────────────────────────
+    @studio path /studio*
+    handle @studio {
         basic_auth {
-            # PROXY_AUTH_PASSWORD is overwritten with the bcrypt on startup
+            # PROXY_AUTH_PASSWORD is overwritten with the bcrypt hash on startup
             {$PROXY_AUTH_USERNAME} {$PROXY_AUTH_PASSWORD}
         }
-
+        uri strip_prefix /studio
         reverse_proxy studio:3000
+    }
+
+    # ── Frontend React (todo lo demás) ───────────────────────────────────────
+    handle {
+        reverse_proxy frontend:80
     }
 
     header -server

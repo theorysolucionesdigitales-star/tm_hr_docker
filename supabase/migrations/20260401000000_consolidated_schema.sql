@@ -323,7 +323,7 @@ CREATE POLICY "Users can delete observaciones_research" ON public.observaciones_
 
 
 -- =============================================
--- 6. APPLICATION FUNCTIONS (handle_new_user, get_public_report_data, soft_delete_*, restore_*, delete_user)
+-- 6. APPLICATION FUNCTIONS (handle_new_user, get_public_report_data, soft_delete_*, restore_*, delete_user, get_user_email)
 -- =============================================
 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -541,6 +541,16 @@ END;
 $$;
 
 
+CREATE OR REPLACE FUNCTION public.get_user_email(p_user_id uuid)
+RETURNS text
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT email FROM auth.users WHERE id = p_user_id;
+$$;
+
+
 -- =============================================
 -- 7. AUTH TRIGGER (on_auth_user_created)
 -- =============================================
@@ -560,6 +570,8 @@ GRANT EXECUTE ON FUNCTION public.soft_delete_cliente(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.restore_postulante(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.restore_proceso(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.restore_cliente(UUID) TO authenticated;
+REVOKE ALL ON FUNCTION public.get_user_email(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_user_email(uuid) TO authenticated;
 
 
 -- =============================================

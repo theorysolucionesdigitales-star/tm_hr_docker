@@ -22,7 +22,7 @@ const Usuarios = () => {
   const { role: currentRole, user: currentUser } = useAuth();
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<{ user_id: string; display_name: string } | null>(null);
+  const [editingUser, setEditingUser] = useState<{ user_id: string; display_name: string; email: string } | null>(null);
   const [editForm, setEditForm] = useState({ display_name: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ id: string } | null>(null);
@@ -147,8 +147,13 @@ const Usuarios = () => {
     }
   };
 
-  const handleEditOpen = (u: { user_id: string; display_name: string | null }) => {
-    setEditingUser({ user_id: u.user_id, display_name: u.display_name ?? "" });
+  const handleEditOpen = async (u: { user_id: string; display_name: string | null }) => {
+    // Fetch the user's email via a SECURITY DEFINER RPC (avoids needing service_role key on frontend)
+    let email = "";
+    const { data: emailData } = await (supabase.rpc as any)("get_user_email", { p_user_id: u.user_id });
+    email = emailData ?? "";
+
+    setEditingUser({ user_id: u.user_id, display_name: u.display_name ?? "", email });
     setEditForm({ display_name: u.display_name ?? "", password: "" });
     setEditOpen(true);
   };
@@ -422,6 +427,15 @@ const Usuarios = () => {
             <DialogTitle className="font-display">Editar Usuario</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Correo electrónico</Label>
+              <Input
+                value={editingUser?.email ?? ""}
+                readOnly
+                disabled
+                className="bg-muted/50 cursor-not-allowed text-muted-foreground"
+              />
+            </div>
             <div className="space-y-2">
               <Label>Nombre de Usuario</Label>
               <Input

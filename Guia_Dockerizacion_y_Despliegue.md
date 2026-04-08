@@ -206,17 +206,21 @@ sudo sh get-docker.sh
    
    > *💡 Nota:* El motor Docker reconstruirá automáticamente la aplicación frontend usando la IP remota que indiques, ya que insertará la variable de forma dinámica.
 
-3. Es tiempo de despertar los recursos en el VPS:
+3. Levanta todo con el compose principal **más el overlay de Caddy** (SSL automático):
    ```bash
-   # Descargamos imágenes y construimos el Frontend
-   docker compose build
-   
-   # Levantamos en modo "Background / Detached"
-   docker compose up -d
+   # Construye el frontend con las variables de producción
+   docker compose -f docker-compose.yml -f docker-compose.caddy.yml build
+
+   # Levanta en modo Background / Detached
+   docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d
    ```
 
-Con esto ya puedes acceder a `http://<IP_DE_VPS>` y observar ¡tu Frontend operando conectado al Supabase embebido!
-Ahora lee la seccion de migraciones y seeders del README.md para implementar las tablas y seeders.
+   Caddy obtendrá automáticamente el certificado SSL de Let's Encrypt la primera vez que reciba una petición. Asegúrate de que el dominio `tailormaderesearch.cl` ya apunte a la IP del VPS **antes** de levantar los servicios.
+
+   Accede a la aplicación en: **`https://tailormaderesearch.cl`**
+   Accede al panel de Supabase en: **`https://tailormaderesearch.cl/studio`**
+
+   > ⚠️ Si usas el comando sin el overlay (`docker compose up -d`), el frontend correrá por HTTP en el puerto 80, sin SSL ni Caddy. Útil para pruebas iniciales.
 
 ---
 
@@ -228,14 +232,19 @@ Ahora lee la seccion de migraciones y seeders del README.md para implementar las
 - **Formato Line Endings (CRLF vs LF)**: Windows genera saltos de línea visualmente extraños (*CRLF*) y Linux emplea (*LF*). Esto es peligroso para los archivos `.sh` o de Nginx (ejemplo: `default.conf`). Si Docker falla levantando tu Nginx, asegúrate en tu Visual Studio Code de que el archivo `nginx/default.conf` tiene como separador de línea **LF** en la esquina inferior derecha del programa.
 
 ### 🟠 Notas para el entorno en Ubuntu (VPS de Producción)
-- **Seguridad en Puertos**: Por precaución, los puertos podrían estar cerrados. Si intentas entrar a las horas y está caído, es el cortafuegos. Abre los puertos:
+- **Seguridad en Puertos**: Por precaución, los puertos podrían estar cerrados. Abre los puertos necesarios:
   ```bash
-  sudo ufw allow 80/tcp   # Servidor Web Front-end (http por defecto)
-  sudo ufw allow 8000/tcp # API Kong de Supabase
-  sudo ufw allow 5432/tcp # PostgreSQL Puro (Si te conectas vía DBeaver/PgAdmin, opcional)
+  sudo ufw allow 80/tcp    # HTTP (Caddy lo redirige a HTTPS automáticamente)
+  sudo ufw allow 443/tcp   # HTTPS (certificado SSL de Let's Encrypt via Caddy)
+  sudo ufw allow 443/udp   # HTTP/3 (opcional, para mejor rendimiento)
+  sudo ufw allow 5432/tcp  # PostgreSQL (solo si necesitas acceso externo con DBeaver/PgAdmin)
   sudo ufw reload
   ```
 - **Práctica Recomendada al Usuario**: Utilizarás al usuario `root` habitualmente en Hostinger. Procura en una etapa futura crear tu propio sub-usuario agregándolo al grupo Docker para minimizar daños: `sudo usermod -aG docker tuusuario`.
 
-### 🛡 Próximos pasos recomendados:
-Una vez funcionando tu VPS sin certificado, el paso final de un DevOps para producción real es añadir **Cloudflare** gratuito encima o implementar un Proxy Reverso (Como **Nginx Proxy Manager** en otro contenedor) para obtener dominios amigables `https://miapp.com` gestionando el Let's Encrypt / SSL del tráfico automáticamente sin que debas modificar el ambiente que hemos logrado montar hoy.
+### 🛡 SSL/HTTPS con Caddy (ya implementado)
+El proyecto ya incluye Caddy como reverse proxy con SSL automático via Let's Encrypt.
+- **Dominio configurado**: `tailormaderesearch.cl`
+- **Caddy maneja**: Certificado SSL, renovación automática, y redirección HTTP → HTTPS.
+- **Comando de inicio**: `docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d`
+- **Requisito**: El dominio debe apuntar a la IP del VPS (`187.127.12.121`) **antes** del primer arranque para que Let's Encrypt pueda verificar el dominio y emitir el certificado.
