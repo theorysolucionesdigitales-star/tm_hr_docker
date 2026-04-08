@@ -143,8 +143,39 @@ psql -h <DB_HOST> -U postgres -d postgres -f supabase/seed/02_fill_seed.sql
 ## ✉️ Configuración de Correos (Auth)
 
 El flujo de autenticación de Supabase Docker no cuenta con un servidor SMTP por defecto.
-- **Si no requieres confirmación vía email** (ideal si el Administrador del sistema crea las cuentas y reparte credenciales): Configura `ENABLE_EMAIL_AUTOCONFIRM=true` dentro de tu directorio `supabase-docker/.env`.
-- **Si gestionarás reestablecimiento de contraseñas u otros mensajes**: Reemplaza la configuración temporal `SMTP_...` en el `.env` por las llaves reales de un proveedor de correos transaccionales (Ej: Resend, SendGrid, ElasticEmail).
+
+### Modo sin correos (Panel Administrativo)
+Si el administrador crea las cuentas y entrega credenciales a mano, configura:
+```
+ENABLE_EMAIL_AUTOCONFIRM=true   # en supabase-docker/.env
+```
+
+### Modo con correos reales — "Olvidé mi contraseña" (Producción)
+El flujo de recuperación de contraseña **requiere SMTP real**. Proveedor recomendado: **[Resend](https://resend.com)** (3000 emails/mes gratis).
+
+**1. Crea una cuenta en [resend.com](https://resend.com) y obtén tu API Key.**
+
+**2. Edita `supabase-docker/.env` con estos valores:**
+```env
+SMTP_ADMIN_EMAIL=noreply@tudominio.com
+SMTP_HOST=smtp.resend.com
+SMTP_PORT=465
+SMTP_USER=resend
+SMTP_PASS=re_TU_API_KEY_DE_RESEND
+SMTP_SENDER_NAME=Tailor Made HR
+ENABLE_EMAIL_AUTOCONFIRM=false
+```
+
+**3. Actualiza también `SITE_URL` con la URL real de la app:**
+```env
+# Local:
+SITE_URL=http://localhost
+
+# VPS Hostinger:
+SITE_URL=http://<IP_DEL_VPS>
+ADDITIONAL_REDIRECT_URLS=http://<IP_DEL_VPS>/reset-password
+```
+> ⚠️ Si `SITE_URL` apunta a `localhost` en producción, los links del correo serán inservibles.
 
 ## 🚀 Despliegue en Producción (Hostinger VPS)
 

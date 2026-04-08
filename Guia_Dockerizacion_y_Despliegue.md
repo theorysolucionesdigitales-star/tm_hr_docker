@@ -101,10 +101,40 @@ Abre el nuevo archivo `.env`. Debes reemplazar obligatoriamente lo siguiente:
   - Para generar tu **`ANON_KEY`** usa el payload: `{ "role": "anon" }`
   - Para generar tu **`SERVICE_ROLE_KEY`** usa el payload: `{ "role": "service_role" }`
 
-### 2.2 Configuración de Correos (Registro de Usuarios)
-Por defecto, el contenedor de Autenticación de Supabase intentará enviar un correo de confirmación al crear un usuario. Si no dispones de un servidor SMTP configurado, probar esto en tu frontend fallará con un error "HTTP 500: Error sending confirmation email".
-- **Para Desarrollo o Modo Administrador Creador (Sin correos)**: Asegúrate de setear en tu archivo `.env` la variable `ENABLE_EMAIL_AUTOCONFIRM=true`. Los usuarios se aprobarán automáticamente de forma instantánea.
-- **Para Producción con Correos Reales**: Si usarás envío de confirmaciones o recuperación de contraseñas, usa el mismo `.env` local o remoto y edita las variables `SMTP_HOST`, `SMTP_USER`, `SMTP_PORT` y `SMTP_PASS` con las credenciales de tu proveedor transaccional (ej. Resend, Sendgrid, AWS SES).
+### 2.2 Configuración de Correos y Recuperación de Contraseña
+Por defecto, Supabase intentará enviar correos de confirmación. Sin SMTP configurado, fallará con "Error sending confirmation email".
+
+- **Para Desarrollo / Modo Admin (Sin correos)**: Setear `ENABLE_EMAIL_AUTOCONFIRM=true` en el `.env`. Los usuarios se crean sin validación por correo.
+- **Para Producción con "Olvidé mi contraseña"**: Debes configurar un servidor SMTP real. Usamos **Resend** (recomendado, 3000 emails/mes gratis).
+
+#### Configurar Resend como proveedor SMTP
+1. Crea una cuenta gratuita en [resend.com](https://resend.com) y genera un **API Key**.
+2. Edita las siguientes variables en `supabase-docker/.env`:
+   ```env
+   SMTP_ADMIN_EMAIL=noreply@tudominio.com
+   SMTP_HOST=smtp.resend.com
+   SMTP_PORT=465
+   SMTP_USER=resend
+   SMTP_PASS=re_TU_API_KEY_DE_RESEND
+   SMTP_SENDER_NAME=Tailor Made HR
+   ENABLE_EMAIL_AUTOCONFIRM=false
+   ```
+3. Actualiza las variables de URL de autenticación (crítico para que los links del correo apunten al sitio correcto):
+   ```env
+   # En LOCAL con Docker (Nginx en puerto 80):
+   SITE_URL=http://localhost
+   ADDITIONAL_REDIRECT_URLS=http://localhost/reset-password
+
+   # En VPS Hostinger (reemplaza con tu IP real):
+   SITE_URL=http://<IP_DEL_VPS>
+   ADDITIONAL_REDIRECT_URLS=http://<IP_DEL_VPS>/reset-password
+   ```
+4. Reiniciar el contenedor de auth para que tome los cambios:
+   ```bash
+   docker compose up -d auth
+   ```
+
+> **⚠️ Importante:** Si `SITE_URL` apunta a `localhost` en el servidor de producción, los links del correo de recuperación serán inservibles para los usuarios. Asegúrate de cambiarlo en el `.env` del VPS.
 
 ---
 
