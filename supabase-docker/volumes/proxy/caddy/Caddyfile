@@ -1,26 +1,32 @@
-{$PROXY_DOMAIN} {
-    # ── Supabase API routes ──────────────────────────────────────────────────
+# ── Sitio principal: Frontend React + API de Supabase ───────────────────────
+tailormaderesearch.cl {
+
+    # Rutas de la API de Supabase → Kong
     @supabase_api path /auth/v1/* /rest/v1/* /graphql/v1 /realtime/v1/* /storage/v1/* /functions/v1/* /mcp /sso/*
 
     handle @supabase_api {
         reverse_proxy kong:8000
     }
 
-    # ── Supabase Studio (panel de administración) ────────────────────────────
-    @studio path /studio*
-    handle @studio {
-        basic_auth {
-            # PROXY_AUTH_PASSWORD is overwritten with the bcrypt hash on startup
-            {$PROXY_AUTH_USERNAME} {$PROXY_AUTH_PASSWORD}
-        }
-        uri strip_prefix /studio
-        reverse_proxy studio:3000
-    }
-
-    # ── Frontend React (todo lo demás) ───────────────────────────────────────
+    # Todo lo demás → Frontend React (Nginx)
     handle {
         reverse_proxy frontend:80
     }
+
+    header -server
+}
+
+# ── Sitio secundario: Supabase Studio (panel de administración) ──────────────
+# Acceder en: https://studio.tailormaderesearch.cl
+# Requiere DNS: studio.tailormaderesearch.cl → 187.127.12.121
+studio.tailormaderesearch.cl {
+
+    basic_auth {
+        # PROXY_AUTH_PASSWORD is overwritten with the bcrypt hash on startup
+        {$PROXY_AUTH_USERNAME} {$PROXY_AUTH_PASSWORD}
+    }
+
+    reverse_proxy studio:3000
 
     header -server
 }
