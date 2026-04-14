@@ -16,10 +16,11 @@ tailormaderesearch.cl {
     header -server
 }
 
-# ── Sitio secundario: Supabase Studio (panel de administración) ──────────────
-# Acceder en: https://studio.tailormaderesearch.cl
-# Requiere DNS: studio.tailormaderesearch.cl → 187.127.12.121
-studio.tailormaderesearch.cl {
+# ── Supabase Studio en puerto alternativo (sin subdomain) ────────────────────
+# Acceder en: https://tailormaderesearch.cl:8443
+# Caddy reutiliza el certificado SSL del dominio principal.
+# Requiere: sudo ufw allow 8443/tcp en el VPS
+tailormaderesearch.cl:8443 {
 
     basic_auth {
         # PROXY_AUTH_PASSWORD is overwritten with the bcrypt hash on startup
