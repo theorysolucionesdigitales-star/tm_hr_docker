@@ -164,8 +164,9 @@ services:
       GOTRUE_MAILER_URLPATHS_CONFIRMATION: ${MAILER_URLPATHS_CONFIRMATION}
       GOTRUE_MAILER_URLPATHS_RECOVERY: ${MAILER_URLPATHS_RECOVERY}
       GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: ${MAILER_URLPATHS_EMAIL_CHANGE}
-      # Custom branded email template (Spanish)
-      GOTRUE_MAILER_TEMPLATES_RECOVERY: /etc/gotrue/templates/recovery.html
+      # Template de recuperacion de contraseña en español — servido por el nginx del frontend
+      # GoTrue requiere URL HTTP, no path de filesystem
+      GOTRUE_MAILER_TEMPLATES_RECOVERY: http://frontend:80/email-recovery.html
 
       GOTRUE_EXTERNAL_PHONE_ENABLED: ${ENABLE_PHONE_SIGNUP}
       GOTRUE_SMS_AUTOCONFIRM: ${ENABLE_PHONE_AUTOCONFIRM}
