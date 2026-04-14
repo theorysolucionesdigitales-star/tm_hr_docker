@@ -54,7 +54,8 @@ src/
 │   ├── pdfReport.tsx    # Generador de reportes PDF
 │   └── utils.ts         # Utilidades generales (cn)
 ├── pages/
-│   ├── Auth.tsx         # Página de login/registro
+│   ├── Auth.tsx         # Página de login/registro + olvide mi contraseña
+│   ├── ResetPassword.tsx # Página de restablecimiento de contraseña (token email)
 │   ├── Clientes.tsx     # Lista de clientes
 │   ├── ClienteDetail.tsx # Detalle de un cliente
 │   ├── Procesos.tsx     # Lista de procesos
@@ -93,6 +94,7 @@ cd supabase-docker
 docker compose up -d --build
 ```
 > En esta configuración el Frontend responderá en `http://localhost` y el panel nativo de Supabase Studio en `http://localhost:8000`.
+> El Supabase Studio también puede abrirse directamente en `http://localhost:3000`.
 
 ## Base de Datos
 
@@ -109,8 +111,10 @@ supabase db push
 # O manualmente con psql (en orden):
 psql -h <DB_HOST> -U postgres -d postgres -f supabase/migrations/<archivo>.sql
 ```
-#### opcion via Supabase web accediendo a http://localhost:8000 o http://<ip del servidor>:8000
-Ir al apartado SQL y ejecutar las migraciones en orden. Mismo caso para los seeders
+#### Opción via Supabase Studio Web
+- **Local**: `http://localhost:8000` → SQL Editor → ejecutar el contenido de cada migration/seed.
+- **Producción (VPS)**: `https://tailormaderesearch.cl:8443` → autenticarse → SQL Editor.
+  > ⚠️ Requiere que el puerto 8443 esté abierto en el firewall del VPS (`sudo ufw allow 8443/tcp`).
 
 ### Seeders
 
@@ -170,12 +174,18 @@ ENABLE_EMAIL_AUTOCONFIRM=false
 ```env
 # Local:
 SITE_URL=http://localhost
+ADDITIONAL_REDIRECT_URLS=http://localhost/reset-password
 
-# VPS Hostinger:
-SITE_URL=http://<IP_DEL_VPS>
-ADDITIONAL_REDIRECT_URLS=http://<IP_DEL_VPS>/reset-password
+# VPS Hostinger (con dominio y HTTPS):
+SITE_URL=https://tailormaderesearch.cl
+ADDITIONAL_REDIRECT_URLS=https://tailormaderesearch.cl/reset-password
 ```
 > ⚠️ Si `SITE_URL` apunta a `localhost` en producción, los links del correo serán inservibles.
+
+**4. Template de correo personalizado (en español):**
+El proyecto incluye un template HTML de recuperación en español ubicado en `public/email-recovery.html`.
+GoTrue lo descarga vía la URL interna `http://frontend:80/email-recovery.html` (ya configurado en `docker-compose.yml`).
+Para modificar el diseño del correo, edita `public/email-recovery.html` y redesplega el frontend.
 
 ## 🚀 Despliegue en Producción (Hostinger VPS)
 
@@ -189,7 +199,9 @@ El proyecto está íntegramente dockerizado y actualmente operativo con **HTTPS/
    Asegúrate de configurar `SUPABASE_PUBLIC_URL`, `API_EXTERNAL_URL` y `SITE_URL` con `https://tailormaderesearch.cl`.
 5. Abre los puertos del firewall:
    ```sh
-   sudo ufw allow 80/tcp && sudo ufw allow 443/tcp && sudo ufw allow 443/udp && sudo ufw reload
+   sudo ufw allow 80/tcp && sudo ufw allow 443/tcp && sudo ufw allow 443/udp
+   sudo ufw allow 8443/tcp  # Supabase Studio
+   sudo ufw reload
    ```
 6. Verifica que el DNS apunte al VPS (`nslookup tailormaderesearch.cl` → `187.127.12.121`) y luego levanta con Caddy:
    ```sh
@@ -197,6 +209,12 @@ El proyecto está íntegramente dockerizado y actualmente operativo con **HTTPS/
    ```
 
 > 📖 **Guía Completa**: Para detalles finos, configuración de SMTP, migraciones y advertencias, consulta la [Guía de Dockerización y Despliegue](./Guia_Dockerizacion_y_Despliegue.md).
+
+### URLs de Producción
+| Servicio | URL |
+|----------|-----|
+| Aplicación | `https://tailormaderesearch.cl` |
+| Supabase Studio | `https://tailormaderesearch.cl:8443` |
 
 ### 🔄 Redespliegues y Actualización de Código
 

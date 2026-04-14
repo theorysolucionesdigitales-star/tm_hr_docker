@@ -125,9 +125,9 @@ Por defecto, Supabase intentará enviar correos de confirmación. Sin SMTP confi
    SITE_URL=http://localhost
    ADDITIONAL_REDIRECT_URLS=http://localhost/reset-password
 
-   # En VPS Hostinger (reemplaza con tu IP real):
-   SITE_URL=http://<IP_DEL_VPS>
-   ADDITIONAL_REDIRECT_URLS=http://<IP_DEL_VPS>/reset-password
+   # En VPS Hostinger (con dominio y HTTPS):
+   SITE_URL=https://tailormaderesearch.cl
+   ADDITIONAL_REDIRECT_URLS=https://tailormaderesearch.cl/reset-password
    ```
 4. Reiniciar el contenedor de auth para que tome los cambios:
    ```bash
@@ -135,6 +135,15 @@ Por defecto, Supabase intentará enviar correos de confirmación. Sin SMTP confi
    ```
 
 > **⚠️ Importante:** Si `SITE_URL` apunta a `localhost` en el servidor de producción, los links del correo de recuperación serán inservibles para los usuarios. Asegúrate de cambiarlo en el `.env` del VPS.
+
+#### Template de correo personalizado
+El proyecto incluye un template HTML en español con el branding de Tailor Made Research.
+- **Archivo fuente**: `public/email-recovery.html` (incluido en el build del frontend).
+- **Cómo funciona**: GoTrue descarga el template vía la URL interna `http://frontend:80/email-recovery.html` gracias a la variable `GOTRUE_MAILER_TEMPLATES_RECOVERY` ya configurada en `docker-compose.yml`.
+- **Para modificar el diseño**: edita `public/email-recovery.html` y redesplega el frontend (`--build frontend`).
+- **Para cambiar el asunto del correo**: ajusta `SMTP_SENDER_NAME` en el `.env`.
+
+> ⚠️ GoTrue requiere una **URL HTTP**, no un path de filesystem. El enfoque `http://frontend:80/...` funciona por red Docker interna sin necesidad de dominio externo.
 
 ---
 
@@ -217,8 +226,10 @@ sudo sh get-docker.sh
 
    Caddy obtendrá automáticamente el certificado SSL de Let's Encrypt la primera vez que reciba una petición. Asegúrate de que el dominio `tailormaderesearch.cl` ya apunte a la IP del VPS **antes** de levantar los servicios.
 
-   Accede a la aplicación en: **`https://tailormaderesearch.cl`**
-   Accede al panel de Supabase en: **`https://tailormaderesearch.cl/studio`**
+   | Servicio | URL |
+   |----------|-----|
+   | Aplicación React | **`https://tailormaderesearch.cl`** |
+   | Supabase Studio | **`https://tailormaderesearch.cl:8443`** |
 
    > ⚠️ Si usas el comando sin el overlay (`docker compose up -d`), el frontend correrá por HTTP en el puerto 80, sin SSL ni Caddy. Útil para pruebas iniciales.
 
@@ -237,6 +248,7 @@ sudo sh get-docker.sh
   sudo ufw allow 80/tcp    # HTTP (Caddy lo redirige a HTTPS automáticamente)
   sudo ufw allow 443/tcp   # HTTPS (certificado SSL de Let's Encrypt via Caddy)
   sudo ufw allow 443/udp   # HTTP/3 (opcional, para mejor rendimiento)
+  sudo ufw allow 8443/tcp  # Supabase Studio (HTTPS en puerto alternativo)
   sudo ufw allow 5432/tcp  # PostgreSQL (solo si necesitas acceso externo con DBeaver/PgAdmin)
   sudo ufw reload
   ```
@@ -248,6 +260,14 @@ El proyecto ya incluye Caddy como reverse proxy con SSL automático via Let's En
 - **Caddy maneja**: Certificado SSL, renovación automática, y redirección HTTP → HTTPS.
 - **Comando de inicio**: `docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d`
 - **Requisito**: El dominio debe apuntar a la IP del VPS (`187.127.12.121`) **antes** del primer arranque para que Let's Encrypt pueda verificar el dominio y emitir el certificado.
+
+### ⚠️ Problema conocido: Line Endings (CRLF vs LF)
+Windows escribe archivos con `CRLF` pero Docker/Linux requiere `LF`. Esto causa errores como `unknown directive "server"` en nginx al arrancar el frontend.
+**Solución**: El repositorio incluye `.gitattributes` que fuerza `LF` en todos los archivos críticos. Si editas archivos de configuración en Windows, guarda siempre con `LF` (barra inferior derecha en VS Code).
+
+### ⚠️ Contenedores que pueden fallar en algunos VPS
+- **`supabase-vector`**: Necesita acceso al socket Docker (`/var/run/docker.sock`). En algunos VPS falla si no existe. No es crítico para el funcionamiento de la app.
+- **`supabase-pooler`**: Necesita que `POOLER_TENANT_ID` en el `.env` sea un valor único (no el placeholder `your-tenant-id`). Cambiarlo por cualquier string único (ej: `tmhr-prod-001`) soluciona el problema.
 
 ---
 
