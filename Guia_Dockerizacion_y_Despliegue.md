@@ -352,3 +352,203 @@ docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d --build f
 ```
 
 El flag `--build frontend` reconstruye **únicamente** el contenedor de React, haciendo el redespliegue considerablemente más rápido.
+
+---
+
+## Paso 6: Gestión de Base de Datos (Reset, Respaldos y Restauración)
+
+### 6.1 Reset Completo de la Base de Datos
+
+> ⚠️ **DESTRUCTIVO**: Este proceso **borra todos los datos** y deja la base de datos en estado inicial. Úsalo solo cuando quieras empezar desde cero (reinstalación, entorno de pruebas limpio, etc.).
+
+#### Opción A — Reset Rápido (Solo datos, conserva imagen Docker)
+
+Baja el stack, elimina el volumen de datos de Postgres y vuelve a levantar:
+
+```bash
+cd /opt/proyecto/supabase-docker
+
+# 1. Bajar todos los contenedores
+docker compose -f docker-compose.yml -f docker-compose.caddy.yml down
+
+# 2. Borrar volumen de datos de PostgreSQL y storage
+docker volume rm supabase-docker_db-config 2>/dev/null || true
+rm -rf volumes/db/data
+rm -rf volumes/storage
+
+# 3. Levantar de nuevo (Postgres se inicializa vacío)
+docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d --build
+
+# 4. Esperar ~30 segundos a que Postgres esté healthy
+docker ps
+```
+
+#### Opción B — Reset Total (Borra todo: volúmenes, imágenes y caché)
+
+```bash
+cd /opt/proyecto/supabase-docker
+
+# Bajar el stack y eliminar TODOS los volúmenes
+docker compose -f docker-compose.yml -f docker-compose.caddy.yml down -v
+
+# Eliminar imágenes descargadas y caché de build
+docker system prune -af
+
+# Borrar datos de disco
+rm -rf volumes/db/data
+rm -rf volumes/storage
+
+# Reconstruir y levantar desde cero
+docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d --build
+```
+
+#### Paso obligatorio post-reset: Aplicar Migraciones y Seeders
+
+Después de cualquier reset, la base de datos queda vacía. Debes aplicar el schema y los datos iniciales:
+
+```bash
+# 1. Aplicar schema completo (tablas, funciones, RLS, permisos)
+cat /opt/proyecto/supabase/migrations/20260401000000_consolidated_schema.sql \
+  | docker exec -i supabase-db psql -U postgres -d postgres
+
+# 2. Aplicar seeder básico (usuario admin)
+cat /opt/proyecto/supabase/seed/01_basic_seed.sql \
+  | docker exec -i supabase-db psql -U postgres -d postgres
+
+# 3. (Opcional) Aplicar datos de prueba
+cat /opt/proyecto/supabase/seed/02_fill_seed.sql \
+  | docker exec -i supabase-db psql -U postgres -d postgres
+```
+
+---
+
+### 6.2 Crear un Respaldo Completo de la Base de Datos
+
+Los respaldos se generan con `pg_dump` ejecutado dentro del contenedor de Postgres.
+
+#### Respaldo completo (schema + datos)
+
+```bash
+cd /opt/proyecto/supabase-docker
+
+# Crear carpeta de respaldos si no existe
+mkdir -p backups
+
+# Crear respaldo con fecha en el nombre
+docker exec supabase-db pg_dump \
+  -U postgres \
+  -d postgres \
+  --no-owner \
+  --no-acl \
+  -F p \
+  > backups/backup_$(date +%Y%m%d_%H%M%S).sql
+
+echo "Respaldo creado en: backups/backup_$(date +%Y%m%d_%H%M%S).sql"
+```
+
+#### Respaldo solo de los datos (sin schema DDL)
+
+Útil si quieres preservar solo los registros para migrar a otro entorno que ya tenga el schema aplicado:
+
+```bash
+docker exec supabase-db pg_dump \
+  -U postgres \
+  -d postgres \
+  --data-only \
+  --no-owner \
+  --no-acl \
+  > backups/datos_$(date +%Y%m%d_%H%M%S).sql
+```
+
+#### Descargar el respaldo a tu PC local
+
+Desde tu máquina Windows (PowerShell), usa `scp` para copiar el archivo:
+
+```powershell
+# Listar respaldos disponibles en el servidor
+ssh root@187.127.12.121 "ls -lh /opt/proyecto/supabase-docker/backups/"
+
+# Descargar el respaldo más reciente a tu PC
+scp root@187.127.12.121:/opt/proyecto/supabase-docker/backups/backup_YYYYMMDD_HHMMSS.sql C:\Users\Alex\Desktop\
+```
+
+---
+
+### 6.3 Restaurar un Respaldo
+
+> ⚠️ **Importante**: Restaurar **sobreescribe** los datos existentes. Se recomienda hacer un respaldo actual antes de restaurar.
+
+#### Desde el VPS directamente
+
+Si el archivo `.sql` ya está en el servidor:
+
+```bash
+cd /opt/proyecto/supabase-docker
+
+# Verificar que el archivo existe
+ls -lh backups/
+
+# Restaurar (reemplaza el nombre del archivo)
+cat backups/backup_YYYYMMDD_HHMMSS.sql \
+  | docker exec -i supabase-db psql -U postgres -d postgres
+
+# Verificar que los datos están presentes
+docker exec supabase-db psql -U postgres -d postgres \
+  -c "SELECT COUNT(*) FROM public.profiles;"
+```
+
+#### Subir un respaldo desde tu PC y restaurar
+
+```powershell
+# 1. Subir el archivo desde Windows al VPS
+scp C:\Users\Alex\Desktop\backup_YYYYMMDD_HHMMSS.sql root@187.127.12.121:/opt/proyecto/supabase-docker/backups/
+```
+
+```bash
+# 2. En el VPS, restaurar el archivo subido
+cat backups/backup_YYYYMMDD_HHMMSS.sql \
+  | docker exec -i supabase-db psql -U postgres -d postgres
+```
+
+#### Restaurar sobre una base limpia (recomendado para migraciones entre servidores)
+
+```bash
+cd /opt/proyecto/supabase-docker
+
+# 1. Bajar el stack
+docker compose -f docker-compose.yml -f docker-compose.caddy.yml down
+
+# 2. Limpiar datos actuales
+rm -rf volumes/db/data
+
+# 3. Levantar de nuevo (DB vacía)
+docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d
+
+# 4. Esperar que Postgres esté listo (~20 segundos)
+sleep 25
+
+# 5. Aplicar el respaldo completo
+cat backups/backup_YYYYMMDD_HHMMSS.sql \
+  | docker exec -i supabase-db psql -U postgres -d postgres
+
+echo "Restauración completada."
+```
+
+---
+
+### 6.4 Automatizar Respaldos Periódicos (Opcional)
+
+Para tener respaldos automáticos diarios, agrega un cron job en el VPS:
+
+```bash
+# Abrir el editor de cron
+crontab -e
+```
+
+Agrega esta línea para hacer un respaldo cada día a las 3:00 AM y conservar los últimos 7:
+
+```cron
+0 3 * * * cd /opt/proyecto/supabase-docker && docker exec supabase-db pg_dump -U postgres -d postgres --no-owner --no-acl > backups/backup_$(date +\%Y\%m\%d).sql && ls -t backups/backup_*.sql | tail -n +8 | xargs rm -f
+```
+
+> 💡 Los respaldos se guardan en `/opt/proyecto/supabase-docker/backups/`. Añade `backups/` al `.gitignore` si aún no está para que los archivos grandes no vayan al repositorio.
