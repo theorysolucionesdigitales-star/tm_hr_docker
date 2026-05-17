@@ -11,7 +11,7 @@ const COLORS = {
   text: [51, 65, 85] as [number, number, number],         // Slate 700
   textLight: [100, 116, 139] as [number, number, number], // Slate 500
   bgLight: [248, 250, 252] as [number, number, number],   // Slate 50
-  bgGrayHeader: [160, 160, 160] as [number, number, number], // Neutral solid Gray
+  bgGrayHeader: [162, 179, 219] as [number, number, number], // #a2b3db
   white: [255, 255, 255] as [number, number, number],
   black: [0, 0, 0] as [number, number, number],
 };
@@ -136,7 +136,7 @@ export const generateReportPDF = async (
 
     // Official Footer logo (Tailor Made small) on bottom right
     if (officialLogoBase64) {
-      doc.addImage(officialLogoBase64, "PNG", 250, 177, 48, 12);
+      doc.addImage(officialLogoBase64, "PNG", 250, 177, 48, 12.92);
     }
   };
 
@@ -148,27 +148,26 @@ export const generateReportPDF = async (
   doc.setFillColor(255, 255, 255);
   doc.rect(0, 0, W, coverH, "F");
 
-  // Tailor Made logo large centered (scaled down to fit new height)
+  // Tailor Made logo large centered
   if (officialLogoBase64) {
-    // 130 width x 32 height, centered
-    doc.addImage(officialLogoBase64, "PNG", 83.5, 12, 130, 32, undefined, "MEDIUM");
+    // 100 width x 26.92 height, centered
+    doc.addImage(officialLogoBase64, "PNG", (W - 100) / 2, 28, 100, 26.92, undefined, "MEDIUM");
   }
 
-  // Decorative double line
-  doc.setDrawColor(160, 160, 160);
-  doc.setLineWidth(0.4);
-  doc.line(60, 52, W - 60, 52);
-  doc.line(60, 54, W - 60, 54);
+  // Thick horizontal line
+  doc.setFillColor(...COLORS.bgGrayHeader);
+  doc.rect(0, 70, W, 4, "F");
 
   // Process text (dark over white)
-  doc.setTextColor(40, 40, 40);
-  doc.setFontSize(18);
+  doc.setTextColor(60, 60, 60);
+  doc.setFontSize(16);
   doc.setFont("helvetica", "italic");
-  doc.text("Proceso", W / 2, 85, { align: "center" });
+  doc.text("Proceso", W / 2, 95, { align: "center" });
 
-  doc.setFontSize(28);
+  doc.setTextColor(40, 40, 40);
+  doc.setFontSize(26);
   doc.setFont("helvetica", "bolditalic");
-  doc.text(proceso.nombre_cargo, W / 2, 100, { align: "center" });
+  doc.text(proceso.nombre_cargo, W / 2, 108, { align: "center" });
 
   // Client logo in white rounded box, or text fallback
   const clienteLogoUrl = (proceso.clientes as any)?.logo_url;
@@ -187,8 +186,8 @@ export const generateReportPDF = async (
           img.src = clientLogoBase64;
         });
 
-        const maxW = 100;
-        const maxH = 32;
+        const maxW = 90;
+        const maxH = 28;
         let logoW = logoImg.naturalWidth || maxW;
         let logoH = logoImg.naturalHeight || maxH;
 
@@ -197,7 +196,7 @@ export const generateReportPDF = async (
         logoH *= scale;
 
         const logoX = (W - logoW) / 2;
-        const logoY = 130 - (logoH / 2); // Vertically centered in the lower half of the new gray zone
+        const logoY = 135 - (logoH / 2); // Positioned near bottom
 
         doc.addImage(clientLogoBase64, "PNG", logoX, logoY, logoW, logoH, undefined, "MEDIUM");
         clientLogoRendered = true;
@@ -208,14 +207,10 @@ export const generateReportPDF = async (
   }
 
   if (!clientLogoRendered) {
-    doc.setTextColor(60, 60, 60); // Dark text fallback over grey (or black if needed, wait grey background is usually darker)
-    // Actually the grey background is ...COLORS.bgGrayHeader ? No, wait.
-    // The previous text was white on gray. In line 166: doctextColor(white)
-    // Let's keep the fallback as it was just smaller
     doc.setTextColor(60, 60, 60);
     doc.setFontSize(22);
     doc.setFont("helvetica", "bold");
-    doc.text(clienteName, W / 2, 132, { align: "center" });
+    doc.text(clienteName, W / 2, 135, { align: "center" });
   }
 
   // === PAGE 2: Summary table & Pie Chart ===
@@ -318,7 +313,7 @@ export const generateReportPDF = async (
         doc.setTextColor(0, 0, 0);
         doc.setFontSize(10);
         doc.setFont("helvetica", "bold");
-        doc.text(`${Math.round(percentage * 100)}%`, textX, textY, { align: "center" });
+        doc.text(`${Math.round(percentage * 100)}% (${count})`, textX, textY, { align: "center" });
       }
 
       // Draw Legend Entry next to chart
@@ -545,7 +540,7 @@ export const generateReportPDF = async (
         cargo: cargo || "Cargo",
         empresa: empresa || "Empresa",
         inicio: inicio || "",
-        fin: fin || "Actualidad",
+        fin: fin || "",
       });
     };
 
@@ -603,23 +598,24 @@ export const generateReportPDF = async (
     const col2X = 95;
     const col3X = 95;
 
-    // Column 1: Motivación
-    doc.setTextColor(15, 60, 85);
-    doc.setFontSize(11); // Increased from 9
-    doc.setFont("helvetica", "bold");
-    doc.text("Motivación:", col1X, rowY);
+    // Column 1: Motivación (solo si hay datos)
+    if (p.motivacion) {
+      doc.setTextColor(15, 60, 85);
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text("Motivación:", col1X, rowY);
 
-    doc.setTextColor(60, 60, 60);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11); // Increased from 9
-    const motText = p.motivacion || p.observaciones || "Sin comentarios adicionales.";
-    const motLines = doc.splitTextToSize(motText, 60);
-    doc.text(motLines, col1X, rowY + 6, { maxWidth: 60, align: "left" });
+      doc.setTextColor(60, 60, 60);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      const motLines = doc.splitTextToSize(p.motivacion, 60);
+      doc.text(motLines, col1X, rowY + 6, { maxWidth: 60, align: "left" });
+    }
 
     // Column 2: Renta actual / última renta
     doc.setTextColor(15, 60, 85);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(11); // Increased from 9
+    doc.setFontSize(11);
     doc.text("Renta actual/ última renta", col2X, rowY);
 
     doc.setTextColor(60, 60, 60);
@@ -629,13 +625,12 @@ export const generateReportPDF = async (
     // Column 3: Pretensión de renta (below renta actual)
     doc.setTextColor(15, 60, 85);
     doc.setFont("helvetica", "bold");
-    doc.text("Pretensión de renta", col3X, rowY + 14); // Spacing adjusted
+    doc.text("Pretensión de renta", col3X, rowY + 14);
 
     doc.setTextColor(60, 60, 60);
     doc.text(`${p.pretension_renta ? formatCurrency(p.pretension_renta) + " líquidos." : "—"}`, col3X, rowY + 20);
 
-    // Beneficios Actuales — Column 3 (right side)
-    // Solo mostrar para candidatos que perfilan y que tengan contenido
+    // Beneficios Actuales — Column 4 (right side)
     if (p.status === "Perfila" && p.benef_act) {
       const col4X = 165;
       doc.setTextColor(15, 60, 85);
@@ -645,8 +640,7 @@ export const generateReportPDF = async (
 
       doc.setTextColor(60, 60, 60);
       doc.setFont("helvetica", "normal");
-      const benefText = p.benef_act;
-      const benefLines = doc.splitTextToSize(benefText, 85);
+      const benefLines = doc.splitTextToSize(p.benef_act, 85);
       doc.text(benefLines, col4X, rowY + 6, { maxWidth: 85, align: "left" });
     }
   }
@@ -747,7 +741,7 @@ export const generateReportPDF = async (
 
   if (backCoverBase64) {
     const imgW = 160;
-    const imgH = 60;
+    const imgH = 43.06;
     doc.addImage(backCoverBase64, "PNG", (backW - imgW) / 2, (backH - imgH) / 2, imgW, imgH, undefined, "MEDIUM");
   }
 

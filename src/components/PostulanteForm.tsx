@@ -21,38 +21,45 @@ const currentYear = new Date().getFullYear();
 // fechas de término proyectadas al futuro cercano.
 const años = Array.from({length: 42}, (_, i) => (currentYear + 1 - i).toString());
 
-const MonthYearSelector = ({ value, onChange, isHasta = false }: { value: string, onChange: (val: string) => void, isHasta?: boolean, placeholder?: string }) => {
+const MonthYearSelector = ({ value = "", onChange, isHasta = false }: { value: string, onChange: (val: string) => void, isHasta?: boolean, placeholder?: string }) => {
   const isActual = isHasta && (value.toLowerCase().includes("actual") || value.toLowerCase().includes("presente"));
-  const parts = value.trim().split(" ");
-  const currentAño = isActual ? "" : (años.find(a => parts.includes(a)) || "");
-  const currentMes = isActual ? "" : (meses.find(m => parts.includes(m)) || "");
+  const currentAño = isActual ? "" : (años.find(a => value.includes(a)) || "");
+  const currentMes = isActual ? "" : (meses.find(m => value.includes(m)) || "");
+
+  // Cuando el usuario cambia desde Actualidad a otro mes, usamos el año actual como fallback
+  const handleMesChange = (val: string) => {
+    if (val === "Actualidad") {
+      onChange("Actualidad");
+    } else {
+      const newMes = val === "none" ? "" : val;
+      // Si estábamos en Actualidad, no hay año guardado → usar año actual
+      const yearToUse = currentAño || currentYear.toString();
+      onChange((newMes ? newMes + " " : "") + yearToUse);
+    }
+  };
 
   return (
     <div className="flex gap-2 w-full">
-      <Select 
-        value={isActual ? "Actualidad" : currentMes} 
-        onValueChange={(val) => {
-          if (val === "Actualidad") {
-            onChange("Actualidad");
-          } else {
-            onChange(val + " " + (currentAño || currentYear.toString()));
-          }
-        }}
+      <Select
+        key={isActual ? "actual" : "normal"}
+        value={isActual ? "Actualidad" : (currentMes || "none")}
+        onValueChange={handleMesChange}
       >
         <SelectTrigger className={!isActual ? "w-1/2" : "w-full"}>
           <SelectValue placeholder="Mes" />
         </SelectTrigger>
         <SelectContent>
           {isHasta && <SelectItem value="Actualidad">Actualidad</SelectItem>}
+          <SelectItem value="none">Sin Mes</SelectItem>
           {meses.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
         </SelectContent>
       </Select>
 
       {!isActual && (
-        <Select 
-          value={currentAño} 
+        <Select
+          value={currentAño}
           onValueChange={(val) => {
-             onChange((currentMes || meses[0]) + " " + val);
+             onChange((currentMes ? currentMes + " " : "") + val);
           }}
         >
           <SelectTrigger className="w-1/2">
@@ -65,6 +72,16 @@ const MonthYearSelector = ({ value, onChange, isHasta = false }: { value: string
       )}
     </div>
   );
+};
+
+const parseDateForValidation = (dateStr: string) => {
+  if (!dateStr || dateStr.toLowerCase().includes("actual")) return Infinity;
+  const currentAño = años.find(a => dateStr.includes(a));
+  const currentMes = meses.find(m => dateStr.includes(m));
+  if (!currentAño) return 0;
+  const year = parseInt(currentAño);
+  const month = currentMes ? meses.indexOf(currentMes) : 0;
+  return year * 12 + month;
 };
 
 interface Props {
@@ -332,7 +349,27 @@ const PostulanteForm = ({ open, onClose, procesoId, editing }: Props) => {
       toast.success(editing ? "Postulante actualizado" : "Postulante registrado");
       onClose();
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => {
+      const msg = err.message || "";
+      // Traducir errores comunes de PostgreSQL/Supabase al español
+      if (msg.includes("invalid input value for enum status_postulante")) {
+        const match = msg.match(/"([^"]+)"/);
+        const val = match ? match[1] : "desconocido";
+        toast.error(`El valor de status "${val}" no está permitido en la base de datos. Contacte al administrador.`);
+      } else if (msg.includes("invalid input value for enum")) {
+        toast.error("Uno de los campos tiene un valor no válido. Verifique los campos e intente de nuevo.");
+      } else if (msg.includes("duplicate key") || msg.includes("unique constraint") || msg.includes("already exists")) {
+        toast.error("Ya existe un registro con esos datos. Verifique que no esté duplicado.");
+      } else if (msg.includes("null value in column") || msg.includes("violates not-null constraint")) {
+        toast.error("Falta completar un campo obligatorio.");
+      } else if (msg.includes("foreign key constraint")) {
+        toast.error("Error de referencia: el proceso o usuario no existe.");
+      } else if (msg.includes("network") || msg.includes("fetch")) {
+        toast.error("Error de conexión. Verifique su conexión a internet e intente de nuevo.");
+      } else {
+        toast.error("Ocurrió un error al guardar. Intente de nuevo.");
+      }
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -341,6 +378,21 @@ const PostulanteForm = ({ open, onClose, procesoId, editing }: Props) => {
       toast.error("El nombre es obligatorio");
       return;
     }
+    
+    // validate dates
+    for (let i = 1; i <= 6; i++) {
+      const inicioStr = form[`fecha_inicio_${i}` as keyof typeof form] as string;
+      const finStr = form[`fecha_fin_${i}` as keyof typeof form] as string;
+      if (inicioStr && finStr) {
+        const valInicio = parseDateForValidation(inicioStr);
+        const valFin = parseDateForValidation(finStr);
+        if (valInicio > valFin) {
+          toast.error(`En la experiencia ${i}, la fecha de hasta no puede ser menor a la fecha desde`);
+          return;
+        }
+      }
+    }
+
     mutation.mutate();
   };
 
@@ -435,7 +487,7 @@ const PostulanteForm = ({ open, onClose, procesoId, editing }: Props) => {
             </div>
             <div className="space-y-2">
               <Label>Teléfono</Label>
-              <Input value={form.telefono} onChange={(e) => set("telefono", e.target.value)} maxLength={11} type="tel" placeholder="Ej. +56912345678" />
+              <Input value={form.telefono} onChange={(e) => set("telefono", e.target.value)} maxLength={20} type="tel" placeholder="Ej. +56912345678" />
             </div>
           </div>
 

@@ -10,8 +10,10 @@ import { ChevronDown, ArrowLeft, ExternalLink, FileDown, Plus, Pencil, Link as L
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import PostulanteForm from "@/components/PostulanteForm";
+import ExcelJS from "exceljs";
 import ObservacionesResearchForm from "@/components/ObservacionesResearchForm";
 import { generateReportPDF } from "@/lib/pdfReport";
+import { generateResumenClientePDF } from "@/lib/pdfResumenCliente";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -24,22 +26,28 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case 'Perfila':
-    case 'CO Entregada':
+    case 'LinkedIn':
       return 'bg-blue-500/90 hover:bg-blue-600 text-white border-transparent shadow-sm';
-    case 'Placed':
-    case 'CO Aceptada':
+    case 'Perfila':
       return 'bg-emerald-500/90 hover:bg-emerald-600 text-white border-transparent shadow-sm';
     case 'Llamar - Pendiente Contacto':
+      return 'bg-violet-500/90 hover:bg-violet-600 text-white border-transparent shadow-sm';
+    case 'No responde al perfil':
+      return 'bg-rose-500/90 hover:bg-rose-600 text-white border-transparent shadow-sm';
+    case 'Excede Renta':
+      return 'bg-orange-500/90 hover:bg-orange-600 text-white border-transparent shadow-sm';
+    case 'Placed':
+    case 'CO Aceptada':
+      return 'bg-teal-500/90 hover:bg-teal-600 text-white border-transparent shadow-sm';
+    case 'CO Entregada':
+      return 'bg-indigo-500/90 hover:bg-indigo-600 text-white border-transparent shadow-sm';
     case 'Plan B':
       return 'bg-amber-500/90 hover:bg-amber-600 text-white border-transparent shadow-sm';
-    case 'No responde al perfil':
     case 'No interesado':
-    case 'Excede Renta':
     case 'CO Rechazada':
-      return 'bg-rose-500/90 hover:bg-rose-600 text-white border-transparent shadow-sm';
-    default:
       return 'bg-slate-500/90 hover:bg-slate-600 text-white border-transparent shadow-sm';
+    default:
+      return 'bg-slate-400/90 hover:bg-slate-500 text-white border-transparent shadow-sm';
   }
 };
 
@@ -67,9 +75,9 @@ const TextExpandable = ({ children, fullText, className }: { children: React.Rea
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <div 
+        <div
           className={cn(
-            "cursor-pointer inline-block w-full transition-all duration-300 origin-left hover:text-primary hover:scale-[1.02] rounded px-1 -mx-1 relative group focus:outline-none", 
+            "cursor-pointer inline-block w-full transition-all duration-300 origin-left hover:text-primary hover:scale-[1.02] rounded px-1 -mx-1 relative group focus:outline-none",
             className
           )}
           onClick={(e) => e.stopPropagation()}
@@ -97,9 +105,9 @@ const RentaExpandable = ({ children, p, className }: { children: React.ReactNode
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <div 
+        <div
           className={cn(
-            "cursor-pointer inline-block w-full transition-all duration-300 origin-left hover:text-primary hover:scale-[1.02] rounded px-1 -mx-1 relative group focus:outline-none", 
+            "cursor-pointer inline-block w-full transition-all duration-300 origin-left hover:text-primary hover:scale-[1.02] rounded px-1 -mx-1 relative group focus:outline-none",
             className
           )}
           onClick={(e) => e.stopPropagation()}
@@ -147,9 +155,9 @@ const ExperienceExpandable = ({ children, p, className }: { children: React.Reac
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <div 
+        <div
           className={cn(
-            "cursor-pointer inline-block w-full transition-all duration-300 origin-left hover:text-primary hover:scale-[1.02] rounded px-1 -mx-1 relative group focus:outline-none", 
+            "cursor-pointer inline-block w-full transition-all duration-300 origin-left hover:text-primary hover:scale-[1.02] rounded px-1 -mx-1 relative group focus:outline-none",
             className
           )}
           onClick={(e) => e.stopPropagation()}
@@ -191,9 +199,9 @@ const CandidateExpandable = ({ children, p, className }: { children: React.React
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <div 
+        <div
           className={cn(
-            "cursor-pointer inline-block w-full transition-all duration-300 origin-left hover:text-primary hover:scale-[1.02] rounded px-1 -mx-1 relative group focus:outline-none", 
+            "cursor-pointer inline-block w-full transition-all duration-300 origin-left hover:text-primary hover:scale-[1.02] rounded px-1 -mx-1 relative group focus:outline-none",
             className
           )}
           onClick={(e) => e.stopPropagation()}
@@ -205,20 +213,20 @@ const CandidateExpandable = ({ children, p, className }: { children: React.React
       <PopoverContent side="top" align="start" className="max-w-[400px] p-5 shadow-xl z-50 border-slate-200 dark:border-slate-800 max-h-[450px] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="space-y-3">
           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Antecedentes Académicos</span>
-            {academics.length === 0 ? (
-              <p className="text-[13px] text-muted-foreground">Sin antecedentes académicos registrados.</p>
-            ) : (
-              academics.map((acad, idx) => (
-                <div key={idx} className={cn("flex flex-col gap-0.5", idx !== 0 && "pt-3 border-t border-slate-100 dark:border-slate-800")}>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm leading-tight">
-                    {acad.titulo || "Sin título"}
-                  </span>
-                  <span className="text-[12px] text-muted-foreground">
-                    {acad.inst || "—"}
-                  </span>
-                </div>
-              ))
-            )}
+          {academics.length === 0 ? (
+            <p className="text-[13px] text-muted-foreground">Sin antecedentes académicos registrados.</p>
+          ) : (
+            academics.map((acad, idx) => (
+              <div key={idx} className={cn("flex flex-col gap-0.5", idx !== 0 && "pt-3 border-t border-slate-100 dark:border-slate-800")}>
+                <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm leading-tight">
+                  {acad.titulo || "Sin título"}
+                </span>
+                <span className="text-[12px] text-muted-foreground">
+                  {acad.inst || "—"}
+                </span>
+              </div>
+            ))
+          )}
         </div>
       </PopoverContent>
     </Popover>
@@ -320,6 +328,13 @@ const ProcesoDetail = () => {
           const valA = statusPriority[a.status] || 99;
           const valB = statusPriority[b.status] || 99;
           comparison = valA - valB;
+          if (comparison === 0) {
+            const rentaA = a.pretension_renta || 0;
+            const rentaB = b.pretension_renta || 0;
+            // Aseguramos que la sub-ordenación sea siempre ascendente (menor a mayor renta),
+            // compensando la inversión que ocurre al final si sortOrder es "desc".
+            comparison = sortOrder === "asc" ? rentaA - rentaB : -(rentaA - rentaB);
+          }
           break;
         case "renta":
           comparison = (a.pretension_renta || 0) - (b.pretension_renta || 0);
@@ -379,8 +394,8 @@ const ProcesoDetail = () => {
   const handleDeletePostulante = async (e: React.MouseEvent, postId: string, isDeleted: boolean) => {
     e.stopPropagation();
     if (isAdmin && isDeleted) {
-        toast.info("Para eliminar permanentemente, edita al postulante.");
-        return;
+      toast.info("Para eliminar permanentemente, edita al postulante.");
+      return;
     }
 
     setConfirmDelete({ id: postId });
@@ -425,6 +440,138 @@ const ProcesoDetail = () => {
     setTimeout(() => setAllCopied(false), 2000);
   };
 
+  const handleExportExcelConsultor = async () => {
+    if (!sortedPostulantes || sortedPostulantes.length === 0) {
+      toast.error("No hay postulantes para exportar");
+      return;
+    }
+
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Consultor");
+
+      worksheet.columns = [
+        { header: "Status", key: "status", width: 25 },
+        { header: "Nombre postulante", key: "nombre", width: 35 },
+        { header: "Edad", key: "edad", width: 10 },
+        { header: "Pretensión de renta", key: "renta", width: 25 },
+        { header: "Observaciones", key: "observaciones", width: 60 },
+      ];
+
+      // Insertar filas vacías al inicio para los títulos (2 filas)
+      worksheet.spliceRows(1, 0, [], []);
+
+      // Agregar título del cliente
+      worksheet.mergeCells("A1:E1");
+      const clientCell = worksheet.getCell("A1");
+      clientCell.value = (proceso.clientes as any)?.nombre || "—";
+      clientCell.font = { bold: true, size: 20, color: { argb: "FF1F2937" } }; // gray-800
+      clientCell.alignment = { vertical: "middle", horizontal: "center" };
+      clientCell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFE0F2FE" }, // Celeste suave
+      };
+      worksheet.getRow(1).height = 38;
+
+      // Agregar título del proceso
+      worksheet.mergeCells("A2:E2");
+      const processCell = worksheet.getCell("A2");
+      processCell.value = proceso.nombre_cargo;
+      processCell.font = { bold: true, size: 20, color: { argb: "FF1E3A8A" } }; // blue-900
+      processCell.alignment = { vertical: "middle", horizontal: "center" };
+      processCell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFDBEAFE" }, // Azul suave
+      };
+      worksheet.getRow(2).height = 38;
+
+      // La fila de encabezados ahora está en la fila 3
+      const headerRow = worksheet.getRow(3);
+      headerRow.height = 30;
+      for (let i = 1; i <= 5; i++) {
+        const cell = headerRow.getCell(i);
+        cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 12 };
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FF1E3A8A" }, // Tailwind blue-900
+        };
+        cell.alignment = { vertical: "middle", horizontal: "center" };
+        cell.border = {
+          top: { style: "thin", color: { argb: "FF000000" } },
+          left: { style: "thin", color: { argb: "FF000000" } },
+          bottom: { style: "thin", color: { argb: "FF000000" } },
+          right: { style: "thin", color: { argb: "FF000000" } },
+        };
+      }
+
+      sortedPostulantes.forEach((p, index) => {
+        const row = worksheet.addRow({
+          status: p.status || "—",
+          nombre: p.nombre || "—",
+          edad: p.edad || "—",
+          renta: p.pretension_renta ? `$${p.pretension_renta.toLocaleString("es-CL")}` : "—",
+          observaciones: p.observaciones || "—",
+        });
+
+        // Calcula un alto dinámico pero con un mínimo generoso (ej: 45) para dar más espaciado
+        const obsLength = p.observaciones?.length || 0;
+        const estimatedLines = Math.ceil(obsLength / 55); // aprox 55 caracteres por línea en esa columna
+        row.height = Math.max(45, estimatedLines * 15 + 20);
+
+        for (let i = 1; i <= 5; i++) {
+          const cell = row.getCell(i);
+          if (index % 2 !== 0) {
+            cell.fill = {
+              type: "pattern",
+              pattern: "solid",
+              fgColor: { argb: "FFE2E8F0" }, // Gris más notable (gray-200)
+            };
+          }
+
+          cell.alignment = { vertical: "middle", wrapText: true };
+          if (i === 3) { // Edad
+            cell.alignment = { vertical: "middle", horizontal: "center" };
+          }
+          // Borde más marcado (negro o gris muy oscuro)
+          cell.border = {
+            top: { style: "thin", color: { argb: "FF000000" } },
+            left: { style: "thin", color: { argb: "FF000000" } },
+            bottom: { style: "thin", color: { argb: "FF000000" } },
+            right: { style: "thin", color: { argb: "FF000000" } },
+          };
+        }
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `Consultor_${proceso?.nombre_cargo.replace(/[^a-zA-Z0-9]/g, "_")}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success("Excel profesional generado exitosamente");
+    } catch (error) {
+      console.error(error);
+      toast.error("Error al generar Excel");
+    }
+  };
+
+  const handleExportResumenCliente = async () => {
+    if (!proceso || !postulantes) return;
+    try {
+      await generateResumenClientePDF(proceso as any, postulantes);
+      toast.success("Resumen Cliente PDF generado exitosamente");
+    } catch (error) {
+      console.error(error);
+      toast.error("Error al generar PDF");
+    }
+  };
+
   if (!proceso) return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -434,32 +581,32 @@ const ProcesoDetail = () => {
           <Skeleton className="h-4 w-[250px]" />
         </div>
       </div>
-      
+
       {/* Top Header Skeleten */}
       <div className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md shadow-lg p-6">
         <Skeleton className="h-10 w-1/4 mb-6" />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-           <Skeleton className="h-[120px] rounded-xl" />
-           <Skeleton className="h-[120px] rounded-xl" />
-           <Skeleton className="h-[120px] rounded-xl" />
+          <Skeleton className="h-[120px] rounded-xl" />
+          <Skeleton className="h-[120px] rounded-xl" />
+          <Skeleton className="h-[120px] rounded-xl" />
         </div>
       </div>
-      
+
       {/* Table Skeletons */}
       <div className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md shadow-lg overflow-hidden">
-         <div className="p-4 border-b border-slate-300 dark:border-slate-700 bg-primary dark:bg-accent">
-           <Skeleton className="h-6 w-[200px]" />
-         </div>
-         <div className="p-4 space-y-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-               <div key={i} className="flex gap-4">
-                 <Skeleton className="h-6 w-[15%]" />
-                 <Skeleton className="h-6 w-[20%]" />
-                 <Skeleton className="h-6 w-[20%]" />
-                 <Skeleton className="h-6 w-[15%]" />
-               </div>
-            ))}
-         </div>
+        <div className="p-4 border-b border-slate-300 dark:border-slate-700 bg-primary dark:bg-accent">
+          <Skeleton className="h-6 w-[200px]" />
+        </div>
+        <div className="p-4 space-y-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex gap-4">
+              <Skeleton className="h-6 w-[15%]" />
+              <Skeleton className="h-6 w-[20%]" />
+              <Skeleton className="h-6 w-[20%]" />
+              <Skeleton className="h-6 w-[15%]" />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -478,28 +625,40 @@ const ProcesoDetail = () => {
             </p>
           </div>
         </div>
-        <div className="flex gap-2 flex-wrap justify-end">
-          <Button variant="secondary" onClick={() => setShareOpen(true)} className="bg-indigo-50/50 hover:bg-indigo-100/50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/20 dark:hover:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-800">
-            <LinkIcon className="mr-2 h-4 w-4" />
-            Acceso para Cliente
-          </Button>
-          <Button variant="outline" onClick={() => setObsOpen(true)}>
-            Observaciones Research
-          </Button>
-          <Button variant="outline" onClick={handleExportPDF}>
-            <FileDown className="mr-2 h-4 w-4" />
-            Generar Reporte PDF
-          </Button>
-          <Button onClick={() => {
-            if (proceso.estado === "Terminado") {
-              toast.error("No puedes agregar más postulantes a un proceso terminado");
-              return;
-            }
-            setFormOpen(true);
-          }}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo Postulante
-          </Button>
+        <div className="flex flex-col gap-2 items-end">
+          <div className="flex gap-2 flex-wrap justify-end">
+            <Button variant="secondary" onClick={() => setShareOpen(true)} className="bg-indigo-50/50 hover:bg-indigo-100/50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/20 dark:hover:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-800">
+              <LinkIcon className="mr-2 h-4 w-4" />
+              Acceso para Cliente
+            </Button>
+            <Button variant="outline" onClick={() => setObsOpen(true)}>
+              Observaciones Research
+            </Button>
+            <Button variant="outline" onClick={handleExportPDF}>
+              <FileDown className="mr-2 h-4 w-4" />
+              Generar Reporte PDF
+            </Button>
+          </div>
+          <div className="flex gap-2 flex-wrap justify-end">
+            <Button variant="outline" onClick={handleExportExcelConsultor}>
+              <FileDown className="mr-2 h-4 w-4" />
+              Excel Consultor
+            </Button>
+            <Button variant="outline" onClick={handleExportResumenCliente}>
+              <FileDown className="mr-2 h-4 w-4" />
+              Resumen Total Cliente
+            </Button>
+            <Button onClick={() => {
+              if (proceso.estado === "Terminado") {
+                toast.error("No puedes agregar más postulantes a un proceso terminado");
+                return;
+              }
+              setFormOpen(true);
+            }}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nuevo Postulante
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -596,11 +755,11 @@ const ProcesoDetail = () => {
                     <CandidateExpandable p={p}>
                       <div className="flex flex-col gap-0.5 w-full">
                         <div className="flex items-center gap-2 flex-wrap">
-                            <span className="truncate max-w-[140px] xl:max-w-[200px]">{p.nombre}</span>
-                            <span className="text-xs font-normal text-slate-500 whitespace-nowrap">
-                              {p.edad ? `${p.edad} años` : ""}
-                            </span>
-                            {(p as any).deleted_at && <Badge variant="destructive" className="text-[10px] h-5 px-1.5 whitespace-nowrap shrink-0">Eliminado</Badge>}
+                          <span className="truncate max-w-[140px] xl:max-w-[200px]">{p.nombre}</span>
+                          <span className="text-xs font-normal text-slate-500 whitespace-nowrap">
+                            {p.edad ? `${p.edad} años` : ""}
+                          </span>
+                          {(p as any).deleted_at && <Badge variant="destructive" className="text-[10px] h-5 px-1.5 whitespace-nowrap shrink-0">Eliminado</Badge>}
                         </div>
                         <span className="text-[11px] font-medium text-muted-foreground/80 truncate mt-0.5">
                           {p.estudios ? p.estudios : "Sin Título"}{p.institucion ? `, ${p.institucion}` : ""}
@@ -639,7 +798,7 @@ const ProcesoDetail = () => {
                   </TableCell>
                   <TableCell className="hidden lg:table-cell py-3 max-w-[220px] pl-16">
                     <TextExpandable fullText={p.observaciones || "Sin observaciones"} className="text-[12px] text-muted-foreground line-clamp-2">
-                       {p.observaciones || "—"}
+                      {p.observaciones || "—"}
                     </TextExpandable>
                   </TableCell>
                   <TableCell className="text-right space-x-1 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>

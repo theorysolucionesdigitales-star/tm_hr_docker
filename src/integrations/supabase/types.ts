@@ -270,6 +270,7 @@ export type Database = {
           renta_var_def: number | null
           benef_def: string | null
           carta_gantt_url: string | null
+          archivo_perfil_url: string | null
           sharing_code: string | null
           sharing_token: string | null
           tipo_contrato: Database["public"]["Enums"]["tipo_contrato"] | null
@@ -289,6 +290,7 @@ export type Database = {
           renta_var_def?: number | null
           benef_def?: string | null
           carta_gantt_url?: string | null
+          archivo_perfil_url?: string | null
           sharing_code?: string | null
           sharing_token?: string | null
           tipo_contrato?: Database["public"]["Enums"]["tipo_contrato"] | null
@@ -308,6 +310,7 @@ export type Database = {
           renta_var_def?: number | null
           benef_def?: string | null
           carta_gantt_url?: string | null
+          archivo_perfil_url?: string | null
           sharing_code?: string | null
           sharing_token?: string | null
           tipo_contrato?: Database["public"]["Enums"]["tipo_contrato"] | null
@@ -473,6 +476,7 @@ export type Database = {
       | "Tecnología"
       | "Telecomunicaciones"
       status_postulante:
+      | "LinkedIn"
       | "Llamar - Pendiente Contacto"
       | "No responde al perfil"
       | "Perfila"
@@ -658,7 +662,7 @@ export const Constants = {
       status_postulante: [
         "LinkedIn",
         "Llamar - Pendiente Contacto",
-        "No responde Perfil",
+        "No responde al perfil",
         "Perfila",
         "No interesado",
         "Plan B",

@@ -10,7 +10,7 @@ CREATE TYPE public.estado_proceso AS ENUM (
 );
 
 CREATE TYPE public.status_postulante AS ENUM (
-  'Llamar - Pendiente Contacto', 'No responde al perfil', 'Perfila',
+  'LinkedIn', 'Llamar - Pendiente Contacto', 'No responde al perfil', 'Perfila',
   'No interesado', 'Plan B', 'Excede Renta',
   'CO Entregada', 'CO Aceptada', 'CO Rechazada', 'Placed'
 );
@@ -136,7 +136,7 @@ CREATE TABLE public.postulantes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   proceso_id UUID REFERENCES public.procesos(id) ON DELETE CASCADE NOT NULL,
   nombre TEXT NOT NULL,
-  status status_postulante NOT NULL DEFAULT 'Llamar - Pendiente Contacto',
+  status status_postulante NOT NULL DEFAULT 'LinkedIn',
   telefono TEXT,
   email TEXT,
   linkedin TEXT,

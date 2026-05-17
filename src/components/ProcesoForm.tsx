@@ -37,9 +37,12 @@ const ProcesoForm = ({ open, onClose, editing, initialClienteId }: Props) => {
   const [perfiles, setPerfiles] = useState<string[]>([""]);
   const [ganttFile, setGanttFile] = useState<File | null>(null);
   const [currentGanttUrl, setCurrentGanttUrl] = useState<string | null>(null);
+  const [perfilFile, setPerfilFile] = useState<File | null>(null);
+  const [currentPerfilUrl, setCurrentPerfilUrl] = useState<string | null>(null);
   const [confirmRestore, setConfirmRestore] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmDeleteGantt, setConfirmDeleteGantt] = useState(false);
+  const [confirmDeletePerfil, setConfirmDeletePerfil] = useState(false);
 
   const { data: clientes = [] } = useQuery({
     queryKey: ["clientes"],
@@ -85,6 +88,8 @@ const ProcesoForm = ({ open, onClose, editing, initialClienteId }: Props) => {
       }
       setGanttFile(null);
       setCurrentGanttUrl(editing?.carta_gantt_url || null);
+      setPerfilFile(null);
+      setCurrentPerfilUrl(editing?.archivo_perfil_url || null);
     }
   }, [open, editing, initialClienteId]);
 
@@ -131,6 +136,18 @@ const ProcesoForm = ({ open, onClose, editing, initialClienteId }: Props) => {
         const { data: publicUrlData } = supabase.storage.from("cartas_gantt").getPublicUrl(fileName);
         
         await supabase.from("procesos").update({ carta_gantt_url: publicUrlData.publicUrl }).eq("id", procesoId);
+      }
+
+      if (perfilFile) {
+        const cleanName = perfilFile.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+        const fileName = `${procesoId}/perfil_${Date.now()}_--_${cleanName}`;
+        const { error: uploadError } = await supabase.storage.from("archivos_perfil").upload(fileName, perfilFile, { upsert: true });
+        
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabase.storage.from("archivos_perfil").getPublicUrl(fileName);
+        
+        await supabase.from("procesos").update({ archivo_perfil_url: publicUrlData.publicUrl }).eq("id", procesoId);
       }
 
       const validPerfiles = perfiles.filter((p) => p.trim());
@@ -198,6 +215,7 @@ const ProcesoForm = ({ open, onClose, editing, initialClienteId }: Props) => {
     await emptyFolder("cvs", editing.id);
     await emptyFolder("fotos", editing.id);
     await emptyFolder("cartas_gantt", editing.id);
+    await emptyFolder("archivos_perfil", editing.id);
 
     const { error } = await supabase.from("procesos").delete().eq("id", editing.id);
     if (error) {
@@ -257,6 +275,55 @@ const ProcesoForm = ({ open, onClose, editing, initialClienteId }: Props) => {
       queryClient.invalidateQueries({ queryKey: ["procesos"] });
     } else {
       toast.error("Error al eliminar Carta Gantt");
+    }
+  };
+
+  const handleDownloadPerfil = async () => {
+    if (!currentPerfilUrl) return;
+    try {
+      const response = await fetch(currentPerfilUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      
+      const extMatch = currentPerfilUrl.split('?')[0].match(/\.([a-zA-Z0-9]+)$/);
+      const ext = extMatch ? extMatch[1] : 'pdf';
+      
+      let downloadName = `Perfil_${form.nombre_cargo.replace(/[^a-zA-Z0-9]/g, "_") || "Proceso"}.${ext}`;
+      
+      const urlParts = currentPerfilUrl.split('/');
+      const lastSegment = urlParts[urlParts.length - 1].split('?')[0];
+      if (lastSegment.includes('_--_')) {
+        downloadName = decodeURIComponent(lastSegment.split('_--_').slice(1).join('_--_'));
+      }
+      
+      a.download = downloadName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      toast.error("Mostrando en pestaña...");
+      window.open(currentPerfilUrl, "_blank");
+    }
+  };
+
+  const handleDeletePerfil = async () => {
+    if (!editing || !currentPerfilUrl) return;
+    
+    const urlParts = currentPerfilUrl.split('/');
+    const fileName = `${editing.id}/${urlParts[urlParts.length - 1]}`;
+
+    await supabase.storage.from("archivos_perfil").remove([fileName]);
+    
+    const { error: updateError } = await supabase.from("procesos").update({ archivo_perfil_url: null }).eq("id", editing.id);
+    if (!updateError) {
+      toast.success("Archivo Perfil Postulante eliminado");
+      setCurrentPerfilUrl(null);
+      queryClient.invalidateQueries({ queryKey: ["procesos"] });
+    } else {
+      toast.error("Error al eliminar Archivo Perfil Postulante");
     }
   };
 
@@ -401,6 +468,34 @@ const ProcesoForm = ({ open, onClose, editing, initialClienteId }: Props) => {
                  </div>
                )}
              </div>
+
+             <div className="flex flex-col gap-2 p-4 border border-dashed rounded-lg bg-slate-50 dark:bg-slate-900 absolute-positioning-parent mt-4">
+               <Label className="text-sm font-semibold flex items-center gap-2">
+                 <FileIcon className="h-4 w-4 text-primary" />
+                 Archivo Perfil Postulante
+               </Label>
+               {currentPerfilUrl ? (
+                 <div className="text-xs text-muted-foreground flex items-center justify-between gap-1 mb-1 p-2 bg-white dark:bg-slate-800 rounded border">
+                   <span className="flex items-center gap-2">Ya existe un archivo guardado. 
+                     <Button type="button" variant="outline" size="sm" className="h-7 text-xs font-semibold px-2 hover:bg-primary/5" onClick={handleDownloadPerfil}>
+                       <Download className="h-3 w-3 mr-1" />
+                       Descargar
+                     </Button>
+                   </span>
+                   <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => setConfirmDeletePerfil(true)} title="Eliminar archivo">
+                     <Trash2 className="h-4 w-4" />
+                   </Button>
+                 </div>
+               ) : (
+                 <div className="flex items-center gap-2 mt-1">
+                    <Input type="file" id="perfil-upload" className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx" onChange={(e) => e.target.files && setPerfilFile(e.target.files[0])} />
+                    <Button type="button" variant="secondary" onClick={() => document.getElementById('perfil-upload')?.click()} className="w-full text-sm font-medium h-10 border hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                      <UploadCloud className="h-4 w-4 mr-2 text-primary" />
+                      {perfilFile ? perfilFile.name : "Subir Archivo Perfil Postulante"}
+                    </Button>
+                 </div>
+               )}
+             </div>
           </div>
           <div className="flex justify-between items-center pt-4">
             <div className="flex gap-2">
@@ -451,6 +546,16 @@ const ProcesoForm = ({ open, onClose, editing, initialClienteId }: Props) => {
           setConfirmDeleteGantt(false);
         }}
         title="¿Eliminar Carta Gantt?"
+        description="Esta acción no se puede deshacer."
+      />
+      <ConfirmDialog
+        open={confirmDeletePerfil}
+        onOpenChange={setConfirmDeletePerfil}
+        onConfirm={() => {
+          handleDeletePerfil();
+          setConfirmDeletePerfil(false);
+        }}
+        title="¿Eliminar Archivo Perfil Postulante?"
         description="Esta acción no se puede deshacer."
       />
     </Dialog>

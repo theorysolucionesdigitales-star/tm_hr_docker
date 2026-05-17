@@ -10,7 +10,7 @@ CREATE TYPE public.estado_proceso AS ENUM (
 );
 
 CREATE TYPE public.status_postulante AS ENUM (
-  'Llamar - Pendiente Contacto', 'No responde al perfil', 'Perfila',
+  'LinkedIn', 'Llamar - Pendiente Contacto', 'No responde al perfil', 'Perfila',
   'No interesado', 'Plan B', 'Excede Renta',
   'CO Entregada', 'CO Aceptada', 'CO Rechazada', 'Placed'
 );

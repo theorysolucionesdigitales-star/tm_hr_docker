@@ -89,7 +89,7 @@ Simula idénticamente el ecosistema de producción abarcando tu Frontend estáti
 ```sh
 # 1. Navegar a la carpeta contenedora
 cd supabase-docker
-# 2. Asegúrate de tener configurado tu .env con credenciales
+# 2. Asegúrate de tener configurado tu .env con credenciales en la raiz y supabase-docker\.env
 # 3. Construir y levantar contenedores
 docker compose up -d --build
 ```
