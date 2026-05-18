@@ -241,6 +241,19 @@ sudo sh get-docker.sh
 - **El Motor**: Si tu máquina local es Windows, **no instales Docker de la consola**. Debes instalar exclusivamente [Docker Desktop](https://www.docker.com/products/docker-desktop/).
 - **WSL 2 es Mándatorio**: En la configuración de *Docker Desktop*, cerciórate de estar usando el motor avanzado de WSL2 (Windows Subsystem for Linux) y no Hyper-V clásico. Es hasta 10 veces más veloz con Node y PostgreSQL.
 - **Formato Line Endings (CRLF vs LF)**: Windows genera saltos de línea visualmente extraños (*CRLF*) y Linux emplea (*LF*). Esto es peligroso para los archivos `.sh` o de Nginx (ejemplo: `default.conf`). Si Docker falla levantando tu Nginx, asegúrate en tu Visual Studio Code de que el archivo `nginx/default.conf` tiene como separador de línea **LF** en la esquina inferior derecha del programa.
+- **Borrado de Volúmenes en Local**: Si necesitas resetear datos locales y borrar las carpetas de volúmenes (el equivalente a `rm -rf`):
+  - **PowerShell**:
+    ```powershell
+    Remove-Item -Recurse -Force volumes/db/data
+    Remove-Item -Recurse -Force volumes/storage
+    # O el alias corto: rm -Recurse -Force volumes/db/data
+    ```
+  - **CMD (Símbolo del sistema)**:
+    ```cmd
+    rd /s /q volumes\db\data
+    rd /s /q volumes\storage
+    ```
+  - **Git Bash / WSL**: Puedes ejecutar el comando original `rm -rf volumes/db/data` directamente.
 
 ### 🟠 Notas para el entorno en Ubuntu (VPS de Producción)
 - **Seguridad en Puertos**: Por precaución, los puertos podrían estar cerrados. Abre los puertos necesarios:
@@ -375,6 +388,8 @@ docker compose -f docker-compose.yml -f docker-compose.caddy.yml down
 docker volume rm supabase-docker_db-config 2>/dev/null || true
 rm -rf volumes/db/data
 rm -rf volumes/storage
+# (En Windows PowerShell usa: Remove-Item -Recurse -Force volumes/db/data, volumes/storage)
+# (En Windows CMD usa: rd /s /q volumes\db\data && rd /s /q volumes\storage)
 
 # 3. Levantar de nuevo (Postgres se inicializa vacío)
 docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d --build
@@ -397,6 +412,8 @@ docker system prune -af
 # Borrar datos de disco
 rm -rf volumes/db/data
 rm -rf volumes/storage
+# (En Windows PowerShell usa: Remove-Item -Recurse -Force volumes/db/data, volumes/storage)
+# (En Windows CMD usa: rd /s /q volumes\db\data && rd /s /q volumes\storage)
 
 # Reconstruir y levantar desde cero
 docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d --build
@@ -520,6 +537,8 @@ docker compose -f docker-compose.yml -f docker-compose.caddy.yml down
 
 # 2. Limpiar datos actuales
 rm -rf volumes/db/data
+# (En Windows PowerShell usa: Remove-Item -Recurse -Force volumes/db/data)
+# (En Windows CMD usa: rd /s /q volumes\db\data)
 
 # 3. Levantar de nuevo (DB vacía)
 docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d
