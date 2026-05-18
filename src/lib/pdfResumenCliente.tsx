@@ -91,6 +91,13 @@ export const generateResumenClientePDF = async (
     const candidates = grouped[status];
     if (!candidates || candidates.length === 0) return;
 
+    // Sort candidates by pretension_renta (ascending) within the status block
+    candidates.sort((a, b) => {
+      const rentaA = a.pretension_renta || 0;
+      const rentaB = b.pretension_renta || 0;
+      return rentaA - rentaB;
+    });
+
     const tableData = candidates.map(p => {
       const rentaActualNum = p.renta_actual ? formatCurrency(p.renta_actual) : "—";
       const hasBonos = p.benef_act && p.benef_act.toLowerCase().includes("bono"); 
