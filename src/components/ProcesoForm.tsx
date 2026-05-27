@@ -164,6 +164,8 @@ const ProcesoForm = ({ open, onClose, editing, initialClienteId }: Props) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["procesos"] });
+      queryClient.invalidateQueries({ queryKey: ["proceso"] });
+      queryClient.invalidateQueries({ queryKey: ["perfiles_cargo"] });
       toast.success(editing ? "Proceso actualizado" : "Proceso creado");
       onClose();
     },
@@ -191,6 +193,7 @@ const ProcesoForm = ({ open, onClose, editing, initialClienteId }: Props) => {
     } else {
       toast.success("Proceso restaurado exitosamente");
       queryClient.invalidateQueries({ queryKey: ["procesos"] });
+      queryClient.invalidateQueries({ queryKey: ["proceso"] });
       onClose();
     }
     setConfirmRestore(false);
@@ -223,6 +226,7 @@ const ProcesoForm = ({ open, onClose, editing, initialClienteId }: Props) => {
     } else {
       toast.success("Proceso eliminado permanentemente");
       queryClient.invalidateQueries({ queryKey: ["procesos"] });
+      queryClient.invalidateQueries({ queryKey: ["proceso"] });
       onClose();
     }
     setConfirmDelete(false);

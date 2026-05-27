@@ -240,15 +240,31 @@ export const generateReportPDF = async (
   doc.setFontSize(18);
   doc.text("Contactados", pieCenterX, 60, { align: "center" }); // Moved up from 75
 
-  // Fixed color map per status (only affects PDF chart, not the app UI)
   const statusColorMap: Record<string, [number, number, number]> = {
-    "LinkedIn": [0, 119, 181],                    // Azul LinkedIn
-    "Llamar - Pendiente Contacto": [255, 193, 7], // Amarillo/Dorado
-    "No responde Perfil": [155, 195, 75],         // Verde Lima
-    "Perfila": [230, 140, 140],                   // Rosado/Coral
-    "No interesado": [128, 128, 128],             // Gris
-    "Plan B": [110, 170, 230],                    // Azul/Celeste
-    "Excede Renta": [255, 150, 50],               // Naranja
+    "LinkedIn": [59, 130, 246],
+    "Perfila": [16, 185, 129],
+    "Llamar - Pendiente Contacto": [139, 92, 246],
+    "No responde al perfil": [244, 63, 94],
+    "Excede Renta": [249, 115, 22],
+    "Placed": [20, 184, 166],
+    "CO Aceptada": [20, 184, 166],
+    "CO Entregada": [99, 102, 241],
+    "Plan B": [245, 158, 11],
+    "No interesado": [100, 116, 139],
+    "CO Rechazada": [100, 116, 139],
+  };
+
+  const statusPriority: Record<string, number> = {
+    "Placed": 1,
+    "CO Aceptada": 2,
+    "CO Entregada": 3,
+    "Perfila": 4,
+    "Plan B": 5,
+    "Llamar - Pendiente Contacto": 6,
+    "Excede Renta": 7,
+    "No interesado": 8,
+    "No responde al perfil": 9,
+    "CO Rechazada": 10,
   };
 
   // Count all statuses dynamically
@@ -262,7 +278,13 @@ export const generateReportPDF = async (
   if (totalChartCandidates > 0) {
     let currentAngle = 0;
 
-    Object.entries(groupedCounts).forEach(([status, count], index) => {
+    const sortedEntries = Object.entries(groupedCounts).sort((a, b) => {
+      const valA = statusPriority[a[0]] || 99;
+      const valB = statusPriority[b[0]] || 99;
+      return valA - valB;
+    });
+
+    sortedEntries.forEach(([status, count], index) => {
       if (count === 0) return;
 
       const percentage = count / totalChartCandidates;
