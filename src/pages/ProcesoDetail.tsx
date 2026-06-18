@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ChevronDown, ArrowLeft, ExternalLink, FileDown, Plus, Pencil, Link as LinkIcon, Trash2, Search, Copy, CheckCircle2, Share2 } from "lucide-react";
+import { ChevronDown, ArrowLeft, ExternalLink, FileDown, Plus, Pencil, Link as LinkIcon, Trash2, Search, Copy, CheckCircle2, Share2, UsersRound } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import PostulanteForm from "@/components/PostulanteForm";
@@ -248,6 +248,10 @@ const ProcesoDetail = () => {
   const [codeCopied, setCodeCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [allCopied, setAllCopied] = useState(false);
+  const [copyModalOpen, setCopyModalOpen] = useState(false);
+  const [copyingPostulante, setCopyingPostulante] = useState<PostulanteWithDelete | null>(null);
+  const [searchProceso, setSearchProceso] = useState("");
+  const [copyingToId, setCopyingToId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { role } = useAuth();
   const isAdmin = role === "admin";
@@ -303,6 +307,20 @@ const ProcesoDetail = () => {
       if (error) throw error;
       return data;
     },
+  });
+
+  const { data: allProcesos = [] } = useQuery({
+    queryKey: ["all_procesos_for_copy"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("procesos")
+        .select("id, nombre_cargo, clientes(nombre)")
+        .is("deleted_at", null)
+        .order("nombre_cargo", { ascending: true });
+      if (error) throw error;
+      return data as { id: string; nombre_cargo: string; clientes: { nombre: string } | null }[];
+    },
+    enabled: copyModalOpen,
   });
 
   const sortedPostulantes = useMemo(() => {
@@ -411,6 +429,38 @@ const ProcesoDetail = () => {
       queryClient.invalidateQueries({ queryKey: ["postulantes", id] });
     }
     setConfirmDelete(null);
+  };
+
+  const handleOpenCopyModal = (e: React.MouseEvent, p: PostulanteWithDelete) => {
+    e.stopPropagation();
+    setCopyingPostulante(p);
+    setSearchProceso("");
+    setCopyModalOpen(true);
+  };
+
+  const handleCopyToProcess = async (targetProcesoId: string) => {
+    if (!copyingPostulante || copyingToId) return;
+    setCopyingToId(targetProcesoId);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { id: _id, created_at: _ca, ...rest } = copyingPostulante as any;
+      const payload = {
+        ...rest,
+        proceso_id: targetProcesoId,
+        status: "LinkedIn",
+        deleted_at: null,
+      };
+      const { error } = await supabase.from("postulantes").insert(payload);
+      if (error) throw error;
+      toast.success(`Postulante copiado al proceso exitosamente con estado "LinkedIn"`);
+      queryClient.invalidateQueries({ queryKey: ["postulantes", targetProcesoId] });
+      setCopyModalOpen(false);
+      setCopyingPostulante(null);
+    } catch (err: any) {
+      toast.error("Error al copiar el postulante: " + err.message);
+    } finally {
+      setCopyingToId(null);
+    }
   };
 
   const handleCopyCode = () => {
@@ -824,6 +874,9 @@ const ProcesoDetail = () => {
                         <FileDown className="h-4 w-4" />
                       </Button>
                     )}
+                    <Button variant="ghost" size="icon" title="Copiar a otro proceso" className="text-sky-600 hover:text-sky-700 hover:bg-sky-100 dark:hover:bg-sky-900/30" onClick={(e) => handleOpenCopyModal(e, p)}>
+                      <UsersRound className="h-4 w-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" title="Editar postulante" onClick={(e) => { e.stopPropagation(); handleEditPostulante(p); }}>
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -944,6 +997,65 @@ const ProcesoDetail = () => {
         description={`Estás a punto de cambiar el status del candidato a "${confirmStatus?.newStatus}".`}
         confirmText="Cambiar Status"
       />
+
+      {/* Modal: Copiar postulante a otro proceso */}
+      <Dialog open={copyModalOpen} onOpenChange={(v) => { if (!v) { setCopyModalOpen(false); setCopyingPostulante(null); } }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UsersRound className="h-5 w-5 text-sky-600" />
+              Copiar Postulante a otro Proceso
+            </DialogTitle>
+            <DialogDescription>
+              <span className="font-semibold text-foreground">{copyingPostulante?.nombre}</span> será copiado al proceso seleccionado con estado{" "}
+              <span className="font-semibold text-sky-600">"LinkedIn"</span>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-2 space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar proceso o cliente..."
+                value={searchProceso}
+                onChange={(e) => setSearchProceso(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="border rounded-lg overflow-hidden max-h-[320px] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+              {allProcesos
+                .filter((p) => p.id !== id)
+                .filter((p) => {
+                  const q = searchProceso.toLowerCase();
+                  return (
+                    p.nombre_cargo.toLowerCase().includes(q) ||
+                    (p.clientes?.nombre ?? "").toLowerCase().includes(q)
+                  );
+                })
+                .map((proc) => (
+                  <button
+                    key={proc.id}
+                    disabled={copyingToId === proc.id}
+                    onClick={() => handleCopyToProcess(proc.id)}
+                    className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-sky-50 dark:hover:bg-sky-900/20 transition-colors disabled:opacity-60 disabled:cursor-not-allowed group"
+                  >
+                    <div className="flex flex-col gap-0.5 min-w-0">
+                      <span className="font-medium text-sm text-slate-800 dark:text-slate-200 truncate group-hover:text-sky-700 dark:group-hover:text-sky-400">
+                        {proc.nombre_cargo}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground truncate">
+                        {proc.clientes?.nombre ?? "—"}
+                      </span>
+                    </div>
+                    <UsersRound className="h-4 w-4 text-muted-foreground group-hover:text-sky-600 shrink-0 ml-3" />
+                  </button>
+                ))}
+              {allProcesos.filter((p) => p.id !== id).length === 0 && (
+                <div className="py-8 text-center text-muted-foreground text-sm">No hay otros procesos disponibles.</div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
