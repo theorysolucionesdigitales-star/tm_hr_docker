@@ -240,6 +240,7 @@ const ProcesoDetail = () => {
   const [editingPostulante, setEditingPostulante] = useState<PostulanteWithDelete | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ id: string } | null>(null);
   const [confirmStatus, setConfirmStatus] = useState<{ id: string, newStatus: string } | null>(null);
+  const [confirmEstadoProceso, setConfirmEstadoProceso] = useState<{ id: string, newEstado: string } | null>(null);
   const [sortField, setSortField] = useState<PostulanteSortField>("created_at");
   const [sortOrder, setSortOrder] = useState<PostulanteSortOrder>("asc");
   const [searchPostulante, setSearchPostulante] = useState("");
@@ -400,6 +401,33 @@ const ProcesoDetail = () => {
     val ? `$${val.toLocaleString("es-CL")}` : "—";
 
   const isProcesoLocked = proceso?.estado === "Descartado" || proceso?.estado === "Terminado";
+
+  // Reglas de estado_proceso_postulante según status (mismas que PostulanteForm)
+  const STATUS_AUTO_DESCARTADO = ["No responde al perfil", "No interesado"];
+  const STATUS_SOLO_RESEARCH = ["LinkedIn", "Llamar - Pendiente Contacto"];
+  const BASE_ESTADOS_PROCESO = Constants.public.Enums.estado_proceso.filter(
+    (s) => s !== "Reunión Cliente" && s !== "Terminado" && s !== "Carta Oferta"
+  );
+  const getAllowedEstados = (status: string) =>
+    STATUS_AUTO_DESCARTADO.includes(status)
+      ? ["Descartado"]
+      : STATUS_SOLO_RESEARCH.includes(status)
+      ? ["Research", "Descartado"]
+      : BASE_ESTADOS_PROCESO;
+
+  const handleEstadoProcesoChange = async (postId: string, newEstado: string) => {
+    try {
+      const { error } = await supabase
+        .from("postulantes")
+        .update({ estado_proceso_postulante: newEstado as any })
+        .eq("id", postId);
+      if (error) throw error;
+      toast.success("Estado en el proceso actualizado");
+      queryClient.invalidateQueries({ queryKey: ["postulantes", id] });
+    } catch (err: any) {
+      toast.error("Error al actualizar el estado en el proceso");
+    }
+  };
 
   const handleEditPostulante = (p: Tables<"postulantes">) => {
     setEditingPostulante(p);
@@ -770,17 +798,18 @@ const ProcesoDetail = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[12%] text-left">Status</TableHead>
-              <TableHead className="w-[23%] min-w-[200px] text-left">Candidato</TableHead>
-              <TableHead className="w-[24%] hidden md:table-cell text-left">Experiencia Laboral</TableHead>
+              <TableHead className="w-[11%] text-left">Status</TableHead>
+              <TableHead className="w-[11%] hidden sm:table-cell text-left">Estado Proceso</TableHead>
+              <TableHead className="w-[20%] min-w-[180px] text-left">Candidato</TableHead>
+              <TableHead className="w-[22%] hidden md:table-cell text-left">Experiencia Laboral</TableHead>
               <TableHead className="w-[10%] hidden xl:table-cell text-left">Pretensión / Renta</TableHead>
-              <TableHead className="w-[22%] hidden lg:table-cell text-left pl-16">Observaciones</TableHead>
-              <TableHead className="w-[9%] text-right pr-6">Acciones</TableHead>
+              <TableHead className="w-[18%] hidden lg:table-cell text-left pl-16">Observaciones</TableHead>
+              <TableHead className="w-[8%] text-right pr-6">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {sortedPostulantes.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Sin postulantes registrados</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Sin postulantes registrados</TableCell></TableRow>
             ) : (
               sortedPostulantes.map((p, index) => (
                 <TableRow
@@ -806,6 +835,34 @@ const ProcesoDetail = () => {
                         ))}
                       </SelectContent>
                     </Select>
+                  </TableCell>
+                  {/* Columna: Estado en el Proceso */}
+                  <TableCell className="py-2 hidden sm:table-cell" onClick={(e) => e.stopPropagation()}>
+                    {(() => {
+                      const autoDescartado = STATUS_AUTO_DESCARTADO.includes(p.status);
+                      const locked = isProcesoLocked || autoDescartado;
+                      const options = locked ? BASE_ESTADOS_PROCESO : getAllowedEstados(p.status);
+                      // Si aplica la regla auto-Descartado, forzar el valor mostrado independientemente del DB
+                      const displayValue = autoDescartado
+                        ? "Descartado"
+                        : (p.estado_proceso_postulante ?? "Research");
+                      return (
+                        <Select
+                          value={displayValue}
+                          onValueChange={(val) => setConfirmEstadoProceso({ id: p.id, newEstado: val })}
+                          disabled={locked}
+                        >
+                          <SelectTrigger className="h-7 text-[11px] w-[130px] border-slate-300 dark:border-slate-600">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {options.map((s) => (
+                              <SelectItem key={s} value={s} className="text-[11px]">{s}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="font-bold min-w-[200px] max-w-[280px] py-3">
                     <CandidateExpandable p={p}>
@@ -1063,6 +1120,18 @@ const ProcesoDetail = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!confirmEstadoProceso}
+        onOpenChange={(v) => !v && setConfirmEstadoProceso(null)}
+        onConfirm={() => {
+          if (confirmEstadoProceso) handleEstadoProcesoChange(confirmEstadoProceso.id, confirmEstadoProceso.newEstado);
+          setConfirmEstadoProceso(null);
+        }}
+        title="¿Cambiar el Estado en el Proceso?"
+        description={`Estás a punto de cambiar el estado del candidato a "${confirmEstadoProceso?.newEstado}".`}
+        confirmText="Cambiar Estado"
+      />
     </div>
   );
 };
