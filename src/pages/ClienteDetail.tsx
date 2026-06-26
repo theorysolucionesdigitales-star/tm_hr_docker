@@ -93,10 +93,11 @@ const ClienteDetail = () => {
   const handleStatusChange = async (procesoId: string, estado: Enums<"estado_proceso">) => {
     const { error } = await supabase.from("procesos").update({ estado }).eq("id", procesoId);
     if (error) {
-      toast.error(error.message);
+      toast.error("No se pudo actualizar el estado. Intenta nuevamente.");
     } else {
       toast.success("Estado actualizado");
       queryClient.invalidateQueries({ queryKey: ["procesos", "cliente", id] });
+      queryClient.invalidateQueries({ queryKey: ["proceso"] });
     }
   };
 
@@ -223,9 +224,11 @@ const ClienteDetail = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {Constants.public.Enums.estado_proceso.map((e) => (
-                          <SelectItem key={e} value={e}>{e}</SelectItem>
-                        ))}
+                        {Constants.public.Enums.estado_proceso
+                          .filter((e) => e !== "Carta Oferta Entregada" && e !== "Carta Oferta Rechazada" && e !== "Carta Oferta Aceptada")
+                          .map((e) => (
+                            <SelectItem key={e} value={e}>{e}</SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   </TableCell>

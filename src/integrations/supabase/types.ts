@@ -450,6 +450,9 @@ export type Database = {
       | "Evaluación Psicológica"
       | "Chequeo Referencias"
       | "Carta Oferta"
+      | "Carta Oferta Entregada"
+      | "Carta Oferta Rechazada"
+      | "Carta Oferta Aceptada"
       | "Terminado"
       genero: "Masculino" | "Femenino" | "Otro" | "Prefiero no decir"
       industria:
@@ -632,6 +635,9 @@ export const Constants = {
         "Evaluación Psicológica",
         "Chequeo Referencias",
         "Carta Oferta",
+        "Carta Oferta Entregada",
+        "Carta Oferta Rechazada",
+        "Carta Oferta Aceptada",
         "Terminado",
       ],
       genero: ["Masculino", "Femenino", "Otro", "Prefiero no decir"],

@@ -89,11 +89,13 @@ interface Props {
   onClose: () => void;
   procesoId: string;
   editing: Tables<"postulantes"> | null;
+  procesoEstado?: string;
 }
 
-const PostulanteForm = ({ open, onClose, procesoId, editing }: Props) => {
+const PostulanteForm = ({ open, onClose, procesoId, editing, procesoEstado }: Props) => {
   const { user, role } = useAuth();
   const isAdmin = role === "admin";
+  const isProcesoLocked = procesoEstado === "Descartado" || procesoEstado === "Terminado";
   const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
   const [uploadingFoto, setUploadingFoto] = useState(false);
@@ -221,6 +223,39 @@ const PostulanteForm = ({ open, onClose, procesoId, editing }: Props) => {
       setEduCount(1);
     }
   }, [editing, open]);
+
+  // Reglas de validación: Status → Estado en el Proceso
+  const STATUS_AUTO_DESCARTADO = ["No responde al perfil", "No interesado"];
+  const STATUS_SOLO_RESEARCH = ["LinkedIn", "Llamar - Pendiente Contacto"];
+
+  // Lista base de estados (excluyendo valores de procesos y deprecados)
+  const BASE_ESTADOS = Constants.public.Enums.estado_proceso.filter(
+    (s) => s !== "Reunión Cliente" && s !== "Terminado" && s !== "Carta Oferta"
+  );
+
+  // Estados permitidos según el status actual
+  const allowedEstados = STATUS_AUTO_DESCARTADO.includes(form.status)
+    ? ["Descartado"]  // Regla 1: forzado a Descartado
+    : STATUS_SOLO_RESEARCH.includes(form.status)
+    ? ["Research", "Descartado"]  // Regla 2: solo Research o Descartado
+    : BASE_ESTADOS;  // Regla 3: cualquier estado disponible
+
+  const isEstadoLocked = !isProcesoLocked && STATUS_AUTO_DESCARTADO.includes(form.status);
+
+  useEffect(() => {
+    if (isProcesoLocked) return; // No aplicar si el proceso está bloqueado
+    if (STATUS_AUTO_DESCARTADO.includes(form.status)) {
+      // Regla 1: auto-forzar a Descartado
+      setForm((prev) => ({ ...prev, estado_proceso_postulante: "Descartado" }));
+    } else if (STATUS_SOLO_RESEARCH.includes(form.status)) {
+      // Regla 2: si el estado actual no es válido, resetear a Research
+      if (form.estado_proceso_postulante !== "Research" && form.estado_proceso_postulante !== "Descartado") {
+        setForm((prev) => ({ ...prev, estado_proceso_postulante: "Research" }));
+      }
+    }
+    // Regla 3: Perfila / Plan B / Excede Renta → sin restricción, no hacer nada
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.status]);
 
   const handleCVUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -462,7 +497,7 @@ const PostulanteForm = ({ open, onClose, procesoId, editing }: Props) => {
             </div>
             <div className="space-y-2">
               <Label>Status *</Label>
-              <Select value={form.status} onValueChange={(v) => set("status", v)}>
+              <Select value={form.status} onValueChange={(v) => set("status", v)} disabled={isProcesoLocked}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {Constants.public.Enums.status_postulante.map((s) => (
@@ -470,20 +505,39 @@ const PostulanteForm = ({ open, onClose, procesoId, editing }: Props) => {
                   ))}
                 </SelectContent>
               </Select>
+              {isProcesoLocked && (
+                <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                  El proceso está <strong>{procesoEstado}</strong> — no se pueden modificar los estados.
+                </p>
+              )}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Estado en el Proceso</Label>
-              <Select value={form.estado_proceso_postulante} onValueChange={(v) => set("estado_proceso_postulante", v)}>
+              <Select
+                value={form.estado_proceso_postulante}
+                onValueChange={(v) => set("estado_proceso_postulante", v)}
+                disabled={isProcesoLocked || isEstadoLocked}
+              >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {Constants.public.Enums.estado_proceso.map((s) => (
+                  {allowedEstados.map((s) => (
                     <SelectItem key={s} value={s}>{s}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {isEstadoLocked && (
+                <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                  Con Status <strong>"{form.status}"</strong> el estado se fija automáticamente en <strong>Descartado</strong>.
+                </p>
+              )}
+              {!isProcesoLocked && !isEstadoLocked && STATUS_SOLO_RESEARCH.includes(form.status) && (
+                <p className="text-[11px] text-slate-500">
+                  Con Status <strong>"{form.status}"</strong> solo se permiten <strong>Research</strong> o <strong>Descartado</strong>.
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Teléfono</Label>

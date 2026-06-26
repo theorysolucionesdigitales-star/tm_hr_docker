@@ -399,6 +399,8 @@ const ProcesoDetail = () => {
   const formatCurrency = (val: number | null) =>
     val ? `$${val.toLocaleString("es-CL")}` : "—";
 
+  const isProcesoLocked = proceso?.estado === "Descartado" || proceso?.estado === "Terminado";
+
   const handleEditPostulante = (p: Tables<"postulantes">) => {
     setEditingPostulante(p);
     setFormOpen(true);
@@ -788,7 +790,11 @@ const ProcesoDetail = () => {
                   onClick={() => handleEditPostulante(p)}
                 >
                   <TableCell className="py-2" onClick={(e) => e.stopPropagation()}>
-                    <Select value={p.status} onValueChange={(val) => setConfirmStatus({ id: p.id, newStatus: val })}>
+                    <Select
+                      value={p.status}
+                      onValueChange={(val) => setConfirmStatus({ id: p.id, newStatus: val })}
+                      disabled={isProcesoLocked}
+                    >
                       <SelectTrigger className={cn("text-[10px] font-medium tracking-wide h-6 px-3 py-0 border-transparent shadow-sm rounded-full inline-flex w-auto max-w-[140px] text-center justify-center [&>svg]:hidden", getStatusColor(p.status))}>
                         <div className="truncate">
                           <SelectValue />
@@ -897,6 +903,7 @@ const ProcesoDetail = () => {
           onClose={handleCloseForm}
           procesoId={id!}
           editing={editingPostulante}
+          procesoEstado={proceso?.estado}
         />
       )}
 
