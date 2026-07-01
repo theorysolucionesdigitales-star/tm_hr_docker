@@ -240,7 +240,6 @@ const ProcesoDetail = () => {
   const [editingPostulante, setEditingPostulante] = useState<PostulanteWithDelete | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ id: string } | null>(null);
   const [confirmStatus, setConfirmStatus] = useState<{ id: string, newStatus: string } | null>(null);
-  const [confirmEstadoProceso, setConfirmEstadoProceso] = useState<{ id: string, newEstado: string } | null>(null);
   const [sortField, setSortField] = useState<PostulanteSortField>("created_at");
   const [sortOrder, setSortOrder] = useState<PostulanteSortOrder>("asc");
   const [searchPostulante, setSearchPostulante] = useState("");
@@ -842,22 +841,21 @@ const ProcesoDetail = () => {
                       const autoDescartado = STATUS_AUTO_DESCARTADO.includes(p.status);
                       const locked = isProcesoLocked || autoDescartado;
                       const options = locked ? BASE_ESTADOS_PROCESO : getAllowedEstados(p.status);
-                      // Si aplica la regla auto-Descartado, forzar el valor mostrado independientemente del DB
                       const displayValue = autoDescartado
                         ? "Descartado"
                         : (p.estado_proceso_postulante ?? "Research");
                       return (
                         <Select
                           value={displayValue}
-                          onValueChange={(val) => setConfirmEstadoProceso({ id: p.id, newEstado: val })}
+                          onValueChange={(val) => handleEstadoProcesoChange(p.id, val)}
                           disabled={locked}
                         >
-                          <SelectTrigger className="h-7 text-[11px] w-[130px] border-slate-300 dark:border-slate-600">
+                          <SelectTrigger className="h-8 text-xs w-[170px] border-slate-300 dark:border-slate-600 [&>span]:truncate [&>span]:text-left">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             {options.map((s) => (
-                              <SelectItem key={s} value={s} className="text-[11px]">{s}</SelectItem>
+                              <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -1120,18 +1118,6 @@ const ProcesoDetail = () => {
           </div>
         </DialogContent>
       </Dialog>
-
-      <ConfirmDialog
-        open={!!confirmEstadoProceso}
-        onOpenChange={(v) => !v && setConfirmEstadoProceso(null)}
-        onConfirm={() => {
-          if (confirmEstadoProceso) handleEstadoProcesoChange(confirmEstadoProceso.id, confirmEstadoProceso.newEstado);
-          setConfirmEstadoProceso(null);
-        }}
-        title="¿Cambiar el Estado en el Proceso?"
-        description={`Estás a punto de cambiar el estado del candidato a "${confirmEstadoProceso?.newEstado}".`}
-        confirmText="Cambiar Estado"
-      />
     </div>
   );
 };
