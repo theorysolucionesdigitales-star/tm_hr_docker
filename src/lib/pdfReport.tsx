@@ -333,9 +333,9 @@ export const generateReportPDF = async (
         const textX = pieCenterX + (pieRadius * 0.65) * Math.cos(textAngle);
         const textY = pieCenterY + (pieRadius * 0.65) * Math.sin(textAngle) + 2;
         doc.setTextColor(0, 0, 0);
-        doc.setFontSize(10);
+        doc.setFontSize(8);
         doc.setFont("helvetica", "bold");
-        doc.text(`${Math.round(percentage * 100)}% (${count})`, textX, textY, { align: "center" });
+        doc.text(`${Math.round(percentage * 100)}%`, textX, textY, { align: "center" });
       }
 
       // Draw Legend Entry next to chart
@@ -685,8 +685,8 @@ export const generateReportPDF = async (
         const tryAddStudy = (est: string | null, inst: string | null) => {
           if (!est && !inst) return;
           let block = est || "—";
-          if (inst) block = est ? `${est}\n${inst}` : inst;
-          if (estudiosStr.length > 0) estudiosStr += "\n"; // Reduced from \n\n to save space
+          if (inst) block = est ? `${est} - ${inst}` : inst;
+          if (estudiosStr.length > 0) estudiosStr += "\n";
           estudiosStr += block;
         };
 

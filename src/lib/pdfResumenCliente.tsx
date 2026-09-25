@@ -109,9 +109,9 @@ export const generateResumenClientePDF = async (
       const pretensionRentaNum = p.pretension_renta ? formatCurrency(p.pretension_renta) : "—";
       const pretensionRenta = pretensionRentaNum;
 
-      const estudiosParts = [p.estudios, p.institucion].filter(Boolean).join(", ");
-      const estudios2Parts = [p.estudios_2, p.institucion_2].filter(Boolean).join(", ");
-      const estudios3Parts = [p.estudios_3, p.institucion_3].filter(Boolean).join(", ");
+      const estudiosParts = [p.estudios, p.institucion].filter(Boolean).join(" - ");
+      const estudios2Parts = [p.estudios_2, p.institucion_2].filter(Boolean).join(" - ");
+      const estudios3Parts = [p.estudios_3, p.institucion_3].filter(Boolean).join(" - ");
       const allEstudios = [estudiosParts, estudios2Parts, estudios3Parts].filter(Boolean).join("\n");
 
       return [
